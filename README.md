@@ -23,7 +23,7 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 
 - `app/page.tsx` — landing page at `/`: HalifaQ heading, tagline, glowing background shapes, and "Log in" / "Sign up" buttons. Also detects the redirect after someone clicks their email confirmation link and shows a clear "Account confirmed" banner (or an error banner if the link expired).
 - `app/login/page.tsx` and `app/signup/page.tsx` — routes that render the auth form (`components/AuthForm.tsx`), defaulting to the matching tab.
-- `components/AuthForm.tsx` — toggle Log In / Sign Up form, wired to real Supabase auth (`supabase.auth.signInWithPassword` / `supabase.auth.signUp`), with error/info messages. Redirects to `/feed` on success.
+- `components/AuthForm.tsx` — a hero above the card shows the logo's icon mark large, with three water-ripple rings expanding outward from behind it on a loop; the toggle Log In / Sign Up form itself is wired to real Supabase auth (`supabase.auth.signInWithPassword` / `supabase.auth.signUp`), with error/info messages, and redirects to `/feed` on success.
 - `app/feed/page.tsx` — the main feed at `/feed`, laid out as a 2-column waterfall grid (1 column on mobile) like RedNote/Pinterest. "All" / "Following" tabs, category filter, live posts from Supabase. Each card shows relative time ("2h ago"), reply count, view count, a "Trending" badge once a post crosses 50 views or 5 likes, and links to the post's detail page. Redirects to `/login` if you're not signed in.
 - `app/post/[id]/page.tsx` — post detail page: full post, reply box, and the list of replies (comments), all pulled live from Supabase.
 - `components/BackgroundShapes.tsx` — shared decorative background (glowing white triangles/squares/circles) used on every page.

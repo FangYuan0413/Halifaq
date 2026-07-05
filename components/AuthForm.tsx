@@ -72,8 +72,30 @@ export default function AuthForm({
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black px-4 py-12">
       <BackgroundShapes />
+
+      {/* Hero: big icon with water ripples expanding outward behind it */}
+      <div className="relative z-10 mb-6 flex flex-col items-center">
+        <div className="relative flex h-16 w-16 items-center justify-center">
+          <span
+            className="animate-ripple pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 rounded-full border-2 border-cyan-300/70"
+            style={{ animationDelay: "0s" }}
+          />
+          <span
+            className="animate-ripple pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 rounded-full border-2 border-cyan-300/70"
+            style={{ animationDelay: "1.2s" }}
+          />
+          <span
+            className="animate-ripple pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 rounded-full border-2 border-cyan-300/70"
+            style={{ animationDelay: "2.4s" }}
+          />
+          <Logo iconOnly size="text-6xl sm:text-7xl" className="relative z-10" />
+        </div>
+        <p className="mt-4 max-w-xs text-center text-sm text-gray-400">
+          Ask anything about life in Halifax.
+        </p>
+      </div>
 
       <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/10 bg-neutral-900 p-8 shadow-[0_0_40px_rgba(255,255,255,0.05)]">
         <Link
@@ -83,11 +105,8 @@ export default function AuthForm({
           &larr; Back
         </Link>
 
-        <div className="mb-8 text-center">
-          <Logo size="text-3xl" className="justify-center" />
-          <p className="mt-1 text-sm text-gray-400">
-            Ask anything about life in Halifax.
-          </p>
+        <div className="mb-6 flex justify-center">
+          <Logo size="text-2xl" />
         </div>
 
         <div className="mb-6 flex rounded-lg bg-white/5 p-1">

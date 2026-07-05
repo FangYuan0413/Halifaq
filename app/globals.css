@@ -210,3 +210,19 @@
   background-size: 250% 100%;
   animation: text-shimmer 3.5s ease-in-out infinite;
 }
+
+/* Water-ripple rings expanding outward from the login/signup hero logo */
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.25);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 3.6s ease-out infinite;
+}
