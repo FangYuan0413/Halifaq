@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import { useToast } from "@/components/ToastProvider";
 
 type Comment = {
   id: string;
@@ -40,6 +41,7 @@ export default function PostDetailPage() {
   const params = useParams();
   const postId = params.id as string;
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -129,10 +131,12 @@ export default function PostDetailPage() {
 
     if (error) {
       setError(error.message);
+      showToast(`Reply failed — ${error.message}`, "error");
       return;
     }
 
     setReply("");
+    showToast("Reply posted!");
     await loadComments();
   }
 
@@ -163,8 +167,11 @@ export default function PostDetailPage() {
 
     const { error } = await supabase.from("posts").delete().eq("id", postId);
     if (!error) {
+      showToast("Post deleted.");
       router.push("/feed");
       router.refresh();
+    } else {
+      showToast(`Couldn't delete post — ${error.message}`, "error");
     }
   }
 

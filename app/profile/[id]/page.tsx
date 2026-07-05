@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import { useToast } from "@/components/ToastProvider";
 
 type Tag = { id: number; name: string };
 
@@ -43,6 +44,7 @@ export default function ProfilePage() {
   const params = useParams();
   const profileId = params.id as string;
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -146,7 +148,7 @@ export default function ProfilePage() {
     if (!file || !currentUserId || !isOwnProfile) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image is too big — please keep it under 5MB.");
+      showToast("Upload failed — image is over 5MB.", "error");
       return;
     }
 
@@ -160,7 +162,7 @@ export default function ProfilePage() {
       .upload(path, file, { upsert: true });
 
     if (uploadError) {
-      alert(uploadError.message);
+      showToast(`Upload failed — ${uploadError.message}`, "error");
       setUploadingAvatar(false);
       return;
     }
@@ -179,6 +181,7 @@ export default function ProfilePage() {
 
     setProfile((prev) => (prev ? { ...prev, avatar_url: versionedUrl } : prev));
     setUploadingAvatar(false);
+    showToast("Avatar updated!");
     if (avatarInputRef.current) avatarInputRef.current.value = "";
   }
 
@@ -208,11 +211,11 @@ export default function ProfilePage() {
 
     if (error) {
       // Username has a unique constraint, so a taken name shows up here.
-      setEditError(
-        error.message.includes("duplicate")
-          ? "That username is already taken."
-          : error.message
-      );
+      const message = error.message.includes("duplicate")
+        ? "That username is already taken."
+        : error.message;
+      setEditError(message);
+      showToast(`Couldn't save profile — ${message}`, "error");
       return;
     }
 
@@ -223,6 +226,7 @@ export default function ProfilePage() {
       bio: editBio.trim() || null,
     });
     setShowEditModal(false);
+    showToast("Profile updated!");
   }
 
   async function toggleFollow() {

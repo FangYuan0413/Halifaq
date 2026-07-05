@@ -14,6 +14,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import Logo from "@/components/Logo";
+import { useToast } from "@/components/ToastProvider";
 
 type Category = { id: number; name: string; slug: string };
 type Tag = { id: number; name: string };
@@ -92,6 +93,7 @@ const TRENDING_LIKES = 5;
 export default function FeedPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -223,6 +225,7 @@ export default function FeedPage() {
 
     if (file.size > 20 * 1024 * 1024) {
       setError("File is too big — please keep it under 20MB.");
+      showToast("Upload failed — file is over 20MB.", "error");
       return;
     }
 
@@ -264,6 +267,7 @@ export default function FeedPage() {
 
       if (uploadError) {
         setError(uploadError.message);
+        showToast(`Upload failed — ${uploadError.message}`, "error");
         setPosting(false);
         return;
       }
@@ -288,7 +292,9 @@ export default function FeedPage() {
 
     if (error || !newPost) {
       setPosting(false);
-      setError(error?.message ?? "Something went wrong — please try again.");
+      const message = error?.message ?? "Something went wrong — please try again.";
+      setError(message);
+      showToast(`Post failed — ${message}`, "error");
       return;
     }
 
@@ -307,6 +313,7 @@ export default function FeedPage() {
     setSelectedTagIds([]);
     clearMedia();
     setShowCompose(false);
+    showToast("Posted!");
     loadPosts();
   }
 
@@ -356,6 +363,9 @@ export default function FeedPage() {
     const { error } = await supabase.from("posts").delete().eq("id", postId);
     if (!error) {
       setPosts((prev) => prev.filter((p) => p.id !== postId));
+      showToast("Post deleted.");
+    } else {
+      showToast(`Couldn't delete post — ${error.message}`, "error");
     }
   }
 
