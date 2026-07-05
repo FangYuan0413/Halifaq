@@ -3,19 +3,16 @@
 import { useEffect } from "react";
 
 // Browsers don't reliably support animated .ico/.gif favicons, so instead
-// this draws a small rotating "radar" mark (cyan arc + pulsing dot) onto an
-// offscreen canvas and swaps the tab's favicon to a fresh frame ~30x/second
-// — a genuinely animated site icon that works everywhere.
+// this draws a small breathing cyan glow orb onto an offscreen canvas and
+// swaps the tab's favicon to a fresh frame ~50x/second — a genuinely
+// animated site icon that works everywhere.
 //
-// Performance notes (this used to stutter):
-// - The glow "halo" is pre-rendered once into its own small canvas and just
-//   redrawn each frame, instead of recomputing an expensive shadowBlur on
-//   every frame.
-// - The canvas is 32x32 (real favicon display size) instead of 64x64, which
-//   roughly quarters the pixels toDataURL has to encode every frame.
-// - Most browsers cache the favicon aggressively and ignore just mutating
-//   an existing <link>'s href, so each frame still removes the old icon
-//   link and inserts a brand-new one — that part is cheap on its own.
+// A real favicon only renders at ~16px, so fine detail (like a thin rotating
+// arc) just turns into a blur at that size — it read as a shapeless blob
+// instead of a crisp mark. This version leans into that instead of fighting
+// it: a single soft glow that smoothly grows and shrinks, plus a small
+// bright core, which is both simpler to render (cheaper, so a higher frame
+// rate is easy) and reads cleanly even at tiny sizes.
 export default function AnimatedFavicon() {
   useEffect(() => {
     document
@@ -31,8 +28,8 @@ export default function AnimatedFavicon() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Pre-rendered soft glow, reused every frame (cheap to redraw an image;
-    // expensive to recompute shadowBlur every frame).
+    // Pre-rendered soft glow, reused every frame (redrawing/scaling an
+    // image is far cheaper than recomputing a gradient or blur each frame).
     const glow = document.createElement("canvas");
     glow.width = SIZE;
     glow.height = SIZE;
@@ -41,44 +38,37 @@ export default function AnimatedFavicon() {
       const gradient = glowCtx.createRadialGradient(
         CENTER,
         CENTER,
-        2,
+        1,
         CENTER,
         CENTER,
         CENTER
       );
-      gradient.addColorStop(0, "rgba(103, 232, 249, 0.85)");
+      gradient.addColorStop(0, "rgba(160, 245, 255, 0.95)");
+      gradient.addColorStop(0.5, "rgba(103, 232, 249, 0.55)");
       gradient.addColorStop(1, "rgba(103, 232, 249, 0)");
       glowCtx.fillStyle = gradient;
       glowCtx.fillRect(0, 0, SIZE, SIZE);
     }
 
-    const TOTAL_FRAMES = 60;
+    const TOTAL_FRAMES = 90;
     let frame = 0;
 
     function draw() {
       if (!ctx) return;
-      const angle = (frame / TOTAL_FRAMES) * Math.PI * 2;
-      const pulse = 1.5 + Math.sin((frame / TOTAL_FRAMES) * Math.PI * 2) * 1.2;
+      const t = (frame / TOTAL_FRAMES) * Math.PI * 2;
+      const scale = 0.75 + (Math.sin(t) + 1) * 0.125; // breathes between 0.75x and 1.0x
+
+      const glowSize = SIZE * scale;
+      const offset = (SIZE - glowSize) / 2;
 
       ctx.clearRect(0, 0, SIZE, SIZE);
-      ctx.drawImage(glow, 0, 0);
+      ctx.drawImage(glow, offset, offset, glowSize, glowSize);
 
-      // Rotating arc ring (crisp stroke, no per-frame blur)
-      ctx.save();
-      ctx.translate(CENTER, CENTER);
-      ctx.rotate(angle);
+      // Small bright core so it still has a defined center at any size.
+      const coreRadius = 1.8 + (Math.sin(t) + 1) * 0.6;
       ctx.beginPath();
-      ctx.arc(0, 0, 11, 0, Math.PI * 1.4);
-      ctx.strokeStyle = "#67e8f9";
-      ctx.lineWidth = 3.5;
-      ctx.lineCap = "round";
-      ctx.stroke();
-      ctx.restore();
-
-      // Pulsing center dot
-      ctx.beginPath();
-      ctx.arc(CENTER, CENTER, pulse, 0, Math.PI * 2);
-      ctx.fillStyle = "#e0fbff";
+      ctx.arc(CENTER, CENTER, coreRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
       ctx.fill();
 
       document
@@ -94,7 +84,7 @@ export default function AnimatedFavicon() {
     }
 
     draw();
-    const id = setInterval(draw, 33); // ~30fps
+    const id = setInterval(draw, 20); // ~50fps — cheap now that each frame is just a scaled image + a small fill
     return () => clearInterval(id);
   }, []);
 
