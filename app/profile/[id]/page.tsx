@@ -412,7 +412,9 @@ export default function ProfilePage() {
                 {post.title}
               </p>
               {post.body && (
-                <p className="mt-0.5 text-sm text-gray-200">{post.body}</p>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-200">
+                  {post.body}
+                </p>
               )}
               {post.media_url &&
                 (post.media_type === "video" ? (

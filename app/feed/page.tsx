@@ -768,7 +768,7 @@ export default function FeedPage() {
                         {highlightMatch(post.title, query)}
                       </p>
                       {post.body && (
-                        <p className="mt-0.5 text-sm text-gray-200">
+                        <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-200">
                           {highlightMatch(post.body, query)}
                         </p>
                       )}

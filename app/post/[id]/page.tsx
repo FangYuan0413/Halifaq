@@ -253,7 +253,9 @@ export default function PostDetailPage() {
             </div>
             <p className="text-base font-semibold text-white">{post.title}</p>
             {post.body && (
-              <p className="mt-1 text-sm text-gray-100">{post.body}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-gray-100">
+                {post.body}
+              </p>
             )}
             {post.media_url &&
               (post.media_type === "video" ? (
@@ -345,7 +347,9 @@ export default function PostDetailPage() {
                 </Link>
                 <span>{new Date(c.created_at).toLocaleDateString()}</span>
               </div>
-              <p className="text-sm text-gray-200">{c.body}</p>
+              <p className="whitespace-pre-wrap text-sm text-gray-200">
+                {c.body}
+              </p>
             </div>
           ))}
         </div>
