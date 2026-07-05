@@ -14,7 +14,10 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import Logo from "@/components/Logo";
+import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
+
+const MAX_IMAGES = 9;
 
 type Category = { id: number; name: string; slug: string };
 type Tag = { id: number; name: string };
@@ -70,8 +73,7 @@ type Post = {
   body: string;
   created_at: string;
   author_id: string;
-  media_url: string | null;
-  media_type: string | null;
+  media: MediaItem[];
   views: number;
   commentCount: number;
   profiles: { username: string; avatar_url: string | null } | null;
@@ -79,11 +81,12 @@ type Post = {
   likedBy: string[];
 };
 
-// Shape Supabase returns for the nested join: post_categories -> categories
-type RawPost = Omit<Post, "tags" | "likedBy" | "commentCount"> & {
+// Shape Supabase returns for the nested joins
+type RawPost = Omit<Post, "tags" | "likedBy" | "commentCount" | "media"> & {
   post_categories: { categories: Tag | null }[] | null;
   post_likes: { user_id: string }[] | null;
   comments: { count: number }[] | null;
+  post_media: { url: string; media_type: string; position: number }[] | null;
 };
 
 // A post counts as "trending" once it's picked up enough real engagement.
@@ -115,15 +118,17 @@ export default function FeedPage() {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [mediaFile, setMediaFile] = useState<File | null>(null);
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  // Multi-image (up to 9) OR a single video — mutually exclusive.
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
+  const [isVideo, setIsVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadPosts() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, media_url, media_type, views, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id), comments(count)"
+        "id, title, body, created_at, author_id, views, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id), comments(count), post_media(url, media_type, position)"
       )
       .order("created_at", { ascending: false });
 
@@ -135,6 +140,10 @@ export default function FeedPage() {
           .filter((c): c is Tag => c !== null),
         likedBy: (p.post_likes ?? []).map((l) => l.user_id),
         commentCount: p.comments?.[0]?.count ?? 0,
+        media: (p.post_media ?? [])
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((m) => ({ url: m.url, media_type: m.media_type })),
       }));
       setPosts(withTags);
     }
@@ -219,26 +228,86 @@ export default function FeedPage() {
     );
   }
 
-  function handleFileSelect(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function clearMedia() {
+    mediaPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setMediaFiles([]);
+    setMediaPreviews([]);
+    setIsVideo(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
-    if (file.size > 20 * 1024 * 1024) {
-      setError("File is too big — please keep it under 20MB.");
-      showToast("Upload failed — file is over 20MB.", "error");
+  function handleFileSelect(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    const video = files.find((f) => f.type.startsWith("video"));
+
+    if (video) {
+      if (video.size > 50 * 1024 * 1024) {
+        showToast("Upload failed — video is over 50MB.", "error");
+        return;
+      }
+      // A video replaces any photos already selected — one or the other.
+      mediaPreviews.forEach((url) => URL.revokeObjectURL(url));
+      setIsVideo(true);
+      setMediaFiles([video]);
+      setMediaPreviews([URL.createObjectURL(video)]);
+      setError(null);
       return;
     }
 
+    if (isVideo) {
+      // Switching from a video to photos — start fresh.
+      mediaPreviews.forEach((url) => URL.revokeObjectURL(url));
+      setIsVideo(false);
+      setMediaFiles([]);
+      setMediaPreviews([]);
+    }
+
+    const room = MAX_IMAGES - (isVideo ? 0 : mediaFiles.length);
+    const oversized = files.some((f) => f.size > 20 * 1024 * 1024);
+    const usable = files
+      .filter((f) => f.size <= 20 * 1024 * 1024)
+      .slice(0, room);
+
+    if (files.length > room || oversized) {
+      showToast(
+        `Only added what fit — up to ${MAX_IMAGES} photos, each under 20MB.`,
+        "error"
+      );
+    }
+
+    if (usable.length === 0) return;
+
     setError(null);
-    setMediaFile(file);
-    setMediaPreview(URL.createObjectURL(file));
+    setMediaFiles((prev) => [...prev, ...usable]);
+    setMediaPreviews((prev) => [
+      ...prev,
+      ...usable.map((f) => URL.createObjectURL(f)),
+    ]);
   }
 
-  function clearMedia() {
-    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
-    setMediaFile(null);
-    setMediaPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  function removeMediaAt(index: number) {
+    URL.revokeObjectURL(mediaPreviews[index]);
+    setMediaFiles((prev) => prev.filter((_, i) => i !== index));
+    setMediaPreviews((prev) => prev.filter((_, i) => i !== index));
+    if (mediaFiles.length <= 1) setIsVideo(false);
+  }
+
+  function moveMedia(index: number, delta: number) {
+    const target = index + delta;
+    if (target < 0 || target >= mediaFiles.length) return;
+
+    setMediaFiles((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setMediaPreviews((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   async function handlePost(e: FormEvent) {
@@ -253,39 +322,12 @@ export default function FeedPage() {
     setPosting(true);
     setError(null);
 
-    let media_url: string | null = null;
-    let media_type: string | null = null;
-
-    if (mediaFile) {
-      media_type = mediaFile.type.startsWith("video") ? "video" : "image";
-      const ext = mediaFile.name.split(".").pop() || "bin";
-      const path = `${userId}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("post-media")
-        .upload(path, mediaFile);
-
-      if (uploadError) {
-        setError(uploadError.message);
-        showToast(`Upload failed — ${uploadError.message}`, "error");
-        setPosting(false);
-        return;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from("post-media")
-        .getPublicUrl(path);
-      media_url = urlData.publicUrl;
-    }
-
     const { data: newPost, error } = await supabase
       .from("posts")
       .insert({
         author_id: userId,
         title: title.trim(),
         body: content,
-        media_url,
-        media_type,
       })
       .select("id")
       .single();
@@ -296,6 +338,41 @@ export default function FeedPage() {
       setError(message);
       showToast(`Post failed — ${message}`, "error");
       return;
+    }
+
+    if (mediaFiles.length > 0) {
+      const mediaRows: { post_id: string; url: string; media_type: string; position: number }[] = [];
+
+      for (let i = 0; i < mediaFiles.length; i++) {
+        const file = mediaFiles[i];
+        const media_type = isVideo ? "video" : "image";
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `${userId}/${Date.now()}-${i}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("post-media")
+          .upload(path, file);
+
+        if (uploadError) {
+          setPosting(false);
+          setError(uploadError.message);
+          showToast(`Upload failed — ${uploadError.message}`, "error");
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("post-media")
+          .getPublicUrl(path);
+
+        mediaRows.push({
+          post_id: newPost.id,
+          url: urlData.publicUrl,
+          media_type,
+          position: i,
+        });
+      }
+
+      await supabase.from("post_media").insert(mediaRows);
     }
 
     if (selectedTagIds.length > 0) {
@@ -772,20 +849,7 @@ export default function FeedPage() {
                           {highlightMatch(post.body, query)}
                         </p>
                       )}
-                      {post.media_url &&
-                        (post.media_type === "video" ? (
-                          <video
-                            src={post.media_url}
-                            controls
-                            className="mt-2 max-h-80 w-full rounded-lg"
-                          />
-                        ) : (
-                          <img
-                            src={post.media_url}
-                            alt=""
-                            className="mt-2 max-h-80 w-full rounded-lg object-cover"
-                          />
-                        ))}
+                      <MediaCarousel media={post.media} />
                       <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
                         <button
                           onClick={(e) => toggleLike(e, post.id, liked)}
@@ -871,28 +935,54 @@ export default function FeedPage() {
               className="w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40"
             />
 
-            {mediaPreview && (
-              <div className="relative mt-3 inline-block">
-                {mediaFile?.type.startsWith("video") ? (
-                  <video
-                    src={mediaPreview}
-                    className="max-h-40 rounded-lg"
-                    controls
-                  />
-                ) : (
-                  <img
-                    src={mediaPreview}
-                    alt="Selected upload preview"
-                    className="max-h-40 rounded-lg object-cover"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={clearMedia}
-                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-black text-xs text-white ring-1 ring-white/20"
-                >
-                  ×
-                </button>
+            {mediaPreviews.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {mediaPreviews.map((preview, i) => (
+                  <div
+                    key={preview}
+                    className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10"
+                  >
+                    {isVideo ? (
+                      <video src={preview} className="h-full w-full object-cover" />
+                    ) : (
+                      <img
+                        src={preview}
+                        alt="Selected upload preview"
+                        className="h-full w-full object-cover"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeMediaAt(i)}
+                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black text-xs text-white ring-1 ring-white/20"
+                    >
+                      ×
+                    </button>
+                    {!isVideo && mediaPreviews.length > 1 && (
+                      <div className="absolute inset-x-0 bottom-0 flex justify-between bg-black/60 px-0.5">
+                        <button
+                          type="button"
+                          onClick={() => moveMedia(i, -1)}
+                          disabled={i === 0}
+                          className="px-1 text-xs text-white disabled:opacity-30"
+                        >
+                          ‹
+                        </button>
+                        <span className="text-[10px] text-gray-300">
+                          {i + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => moveMedia(i, 1)}
+                          disabled={i === mediaPreviews.length - 1}
+                          className="px-1 text-xs text-white disabled:opacity-30"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -923,15 +1013,19 @@ export default function FeedPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,video/*"
+                  multiple
                   onChange={handleFileSelect}
                   className="hidden"
                 />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/10"
+                  disabled={isVideo || mediaFiles.length >= MAX_IMAGES}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
                 >
-                  + Photo/Video
+                  {mediaFiles.length > 0 && !isVideo
+                    ? `+ Photo (${mediaFiles.length}/${MAX_IMAGES})`
+                    : "+ Photo/Video"}
                 </button>
               </div>
               <button

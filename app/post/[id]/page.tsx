@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
 
 type Comment = {
@@ -23,17 +24,17 @@ type PostDetail = {
   body: string;
   created_at: string;
   author_id: string;
-  media_url: string | null;
-  media_type: string | null;
+  media: MediaItem[];
   profiles: { username: string; avatar_url: string | null } | null;
   tags: Tag[];
   likedBy: string[];
 };
 
-// Shape Supabase returns for the nested join: post_categories -> categories
-type RawPost = Omit<PostDetail, "tags" | "likedBy"> & {
+// Shape Supabase returns for the nested joins
+type RawPost = Omit<PostDetail, "tags" | "likedBy" | "media"> & {
   post_categories: { categories: Tag | null }[] | null;
   post_likes: { user_id: string }[] | null;
+  post_media: { url: string; media_type: string; position: number }[] | null;
 };
 
 export default function PostDetailPage() {
@@ -56,7 +57,7 @@ export default function PostDetailPage() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, media_url, media_type, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id)"
+        "id, title, body, created_at, author_id, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id), post_media(url, media_type, position)"
       )
       .eq("id", postId)
       .single();
@@ -75,6 +76,10 @@ export default function PostDetailPage() {
         .map((pc) => pc.categories)
         .filter((c): c is Tag => c !== null),
       likedBy: (raw.post_likes ?? []).map((l) => l.user_id),
+      media: (raw.post_media ?? [])
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map((m) => ({ url: m.url, media_type: m.media_type })),
     });
   }
 
@@ -257,20 +262,7 @@ export default function PostDetailPage() {
                 {post.body}
               </p>
             )}
-            {post.media_url &&
-              (post.media_type === "video" ? (
-                <video
-                  src={post.media_url}
-                  controls
-                  className="mt-2 max-h-[28rem] w-full rounded-lg"
-                />
-              ) : (
-                <img
-                  src={post.media_url}
-                  alt=""
-                  className="mt-2 max-h-[28rem] w-full rounded-lg object-cover"
-                />
-              ))}
+            <MediaCarousel media={post.media} />
             <button
               onClick={toggleLike}
               className={`mt-3 flex items-center gap-1.5 text-xs font-medium transition ${

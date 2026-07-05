@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
 
 type Tag = { id: number; name: string };
@@ -22,8 +23,7 @@ type Post = {
   title: string;
   body: string;
   created_at: string;
-  media_url: string | null;
-  media_type: string | null;
+  media: MediaItem[];
   tags: Tag[];
   likeCount: number;
 };
@@ -33,10 +33,9 @@ type RawPost = {
   title: string;
   body: string;
   created_at: string;
-  media_url: string | null;
-  media_type: string | null;
   post_categories: { categories: Tag | null }[] | null;
   post_likes: { user_id: string }[] | null;
+  post_media: { url: string; media_type: string; position: number }[] | null;
 };
 
 export default function ProfilePage() {
@@ -100,7 +99,7 @@ export default function ProfilePage() {
       const { data: postsData } = await supabase
         .from("posts")
         .select(
-          "id, title, body, created_at, media_url, media_type, post_categories(categories(id, name)), post_likes(user_id)"
+          "id, title, body, created_at, post_categories(categories(id, name)), post_likes(user_id), post_media(url, media_type, position)"
         )
         .eq("author_id", profileId)
         .order("created_at", { ascending: false });
@@ -112,6 +111,10 @@ export default function ProfilePage() {
             .map((pc) => pc.categories)
             .filter((c): c is Tag => c !== null),
           likeCount: (p.post_likes ?? []).length,
+          media: (p.post_media ?? [])
+            .slice()
+            .sort((a, b) => a.position - b.position)
+            .map((m) => ({ url: m.url, media_type: m.media_type })),
         })
       );
       setPosts(withExtras);
@@ -416,20 +419,7 @@ export default function ProfilePage() {
                   {post.body}
                 </p>
               )}
-              {post.media_url &&
-                (post.media_type === "video" ? (
-                  <video
-                    src={post.media_url}
-                    controls
-                    className="mt-2 max-h-80 w-full rounded-lg"
-                  />
-                ) : (
-                  <img
-                    src={post.media_url}
-                    alt=""
-                    className="mt-2 max-h-80 w-full rounded-lg object-cover"
-                  />
-                ))}
+              <MediaCarousel media={post.media} />
             </Link>
           ))}
         </div>
