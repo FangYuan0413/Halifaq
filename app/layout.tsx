@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Dancing_Script } from "next/font/google";
 import "./globals.css";
 
-// A distinctive display font used for the HalifaQ wordmark (see
+// A light, connected script font used for the HalifaQ wordmark (see
 // components/Logo.tsx). Exposed as the --font-logo CSS variable so any
 // component can opt in with font-[family-name:var(--font-logo)].
-const spaceGrotesk = Space_Grotesk({
+const logoFont = Dancing_Script({
   subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["400", "500"],
   variable: "--font-logo",
 });
 
@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} bg-black text-white`}>
+      <body className={`${logoFont.variable} bg-black text-white`}>
         {children}
       </body>
     </html>
