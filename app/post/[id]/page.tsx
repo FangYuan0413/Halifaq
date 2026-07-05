@@ -11,7 +11,7 @@ type Comment = {
   body: string;
   created_at: string;
   author_id: string;
-  profiles: { username: string } | null;
+  profiles: { username: string; avatar_url: string | null } | null;
 };
 
 type Tag = { id: number; name: string };
@@ -24,7 +24,7 @@ type PostDetail = {
   author_id: string;
   media_url: string | null;
   media_type: string | null;
-  profiles: { username: string } | null;
+  profiles: { username: string; avatar_url: string | null } | null;
   tags: Tag[];
   likedBy: string[];
 };
@@ -54,7 +54,7 @@ export default function PostDetailPage() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, media_url, media_type, profiles!posts_author_id_fkey(username), post_categories(categories(id, name)), post_likes(user_id)"
+        "id, title, body, created_at, author_id, media_url, media_type, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id)"
       )
       .eq("id", postId)
       .single();
@@ -79,7 +79,7 @@ export default function PostDetailPage() {
   async function loadComments() {
     const { data, error } = await supabase
       .from("comments")
-      .select("id, body, created_at, author_id, profiles(username)")
+      .select("id, body, created_at, author_id, profiles(username, avatar_url)")
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
 
@@ -209,8 +209,19 @@ export default function PostDetailPage() {
             <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
               <Link
                 href={`/profile/${post.author_id}`}
-                className="font-medium text-gray-300 hover:text-white hover:underline"
+                className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white hover:underline"
               >
+                {post.profiles?.avatar_url ? (
+                  <img
+                    src={post.profiles.avatar_url}
+                    alt=""
+                    className="h-5 w-5 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
+                    {(post.profiles?.username ?? "?").slice(0, 1).toUpperCase()}
+                  </span>
+                )}
                 {post.profiles?.username ?? "Someone"}
               </Link>
               {post.tags.map((t) => (
@@ -308,8 +319,19 @@ export default function PostDetailPage() {
               <div className="mb-1 flex items-center gap-2 text-xs text-gray-500">
                 <Link
                   href={`/profile/${c.author_id}`}
-                  className="font-medium text-gray-300 hover:text-white hover:underline"
+                  className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white hover:underline"
                 >
+                  {c.profiles?.avatar_url ? (
+                    <img
+                      src={c.profiles.avatar_url}
+                      alt=""
+                      className="h-5 w-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
+                      {(c.profiles?.username ?? "?").slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
                   {c.profiles?.username ?? "Someone"}
                 </Link>
                 <span>{new Date(c.created_at).toLocaleDateString()}</span>

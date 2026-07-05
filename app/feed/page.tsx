@@ -34,10 +34,7 @@ function highlightMatch(text: string, query: string) {
   while (idx !== -1) {
     if (idx > start) parts.push(text.slice(start, idx));
     parts.push(
-      <mark
-        key={idx}
-        className="rounded bg-yellow-400/30 text-yellow-200"
-      >
+      <mark key={idx} className="rounded bg-yellow-400/30 text-yellow-200">
         {text.slice(idx, idx + lowerQuery.length)}
       </mark>
     );
@@ -49,6 +46,22 @@ function highlightMatch(text: string, query: string) {
   return parts;
 }
 
+// Turns a timestamp into "just now" / "5m ago" / "3h ago" / "2d ago", falling
+// back to a plain date once it's more than a week old.
+function formatRelativeTime(dateString: string) {
+  const date = new Date(dateString);
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
+
 type Post = {
   id: string;
   title: string;
@@ -58,16 +71,22 @@ type Post = {
   media_url: string | null;
   media_type: string | null;
   views: number;
-  profiles: { username: string } | null;
+  commentCount: number;
+  profiles: { username: string; avatar_url: string | null } | null;
   tags: Tag[];
   likedBy: string[];
 };
 
 // Shape Supabase returns for the nested join: post_categories -> categories
-type RawPost = Omit<Post, "tags" | "likedBy"> & {
+type RawPost = Omit<Post, "tags" | "likedBy" | "commentCount"> & {
   post_categories: { categories: Tag | null }[] | null;
   post_likes: { user_id: string }[] | null;
+  comments: { count: number }[] | null;
 };
+
+// A post counts as "trending" once it's picked up enough real engagement.
+const TRENDING_VIEWS = 50;
+const TRENDING_LIKES = 5;
 
 export default function FeedPage() {
   const router = useRouter();
@@ -79,6 +98,8 @@ export default function FeedPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [feedTab, setFeedTab] = useState<"all" | "following">("all");
   const [filterCategoryIds, setFilterCategoryIds] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -99,7 +120,7 @@ export default function FeedPage() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, media_url, media_type, views, profiles!posts_author_id_fkey(username), post_categories(categories(id, name)), post_likes(user_id)"
+        "id, title, body, created_at, author_id, media_url, media_type, views, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id), comments(count)"
       )
       .order("created_at", { ascending: false });
 
@@ -110,6 +131,7 @@ export default function FeedPage() {
           .map((pc) => pc.categories)
           .filter((c): c is Tag => c !== null),
         likedBy: (p.post_likes ?? []).map((l) => l.user_id),
+        commentCount: p.comments?.[0]?.count ?? 0,
       }));
       setPosts(withTags);
     }
@@ -142,6 +164,12 @@ export default function FeedPage() {
         .select("*")
         .order("name");
       setCategories(cats ?? []);
+
+      const { data: followRows } = await supabase
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", user.id);
+      setFollowingIds((followRows ?? []).map((r) => r.following_id));
 
       await loadPosts();
     }
@@ -306,7 +334,9 @@ export default function FeedPage() {
         .eq("post_id", postId)
         .eq("user_id", userId);
     } else {
-      await supabase.from("post_likes").insert({ post_id: postId, user_id: userId });
+      await supabase
+        .from("post_likes")
+        .insert({ post_id: postId, user_id: userId });
     }
   }
 
@@ -344,6 +374,9 @@ export default function FeedPage() {
 
   const query = searchQuery.trim().toLowerCase();
   const visiblePosts = posts
+    .filter(
+      (p) => feedTab === "all" || followingIds.includes(p.author_id)
+    )
     .filter(
       (p) =>
         filterCategoryIds.length === 0 ||
@@ -468,7 +501,7 @@ export default function FeedPage() {
 
         {/* Main content */}
         <main className="flex-1 px-4 py-8">
-          <div className="mx-auto max-w-xl">
+          <div className="mx-auto max-w-3xl">
             {/* Mobile-only header (sidebar is hidden below sm) */}
             <div className="mb-6 flex items-center justify-between sm:hidden">
               <h1 className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
@@ -479,6 +512,30 @@ export default function FeedPage() {
                 className="text-xs font-medium text-gray-500 hover:text-gray-300"
               >
                 Log out
+              </button>
+            </div>
+
+            {/* All / Following tabs */}
+            <div className="mb-4 flex gap-2">
+              <button
+                onClick={() => setFeedTab("all")}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                  feedTab === "all"
+                    ? "bg-white text-black"
+                    : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFeedTab("following")}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                  feedTab === "following"
+                    ? "bg-white text-black"
+                    : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10"
+                }`}
+              >
+                Following
               </button>
             </div>
 
@@ -632,92 +689,125 @@ export default function FeedPage() {
               ))}
             </div>
 
-            {/* Feed list */}
-            <div className="space-y-3">
-              {visiblePosts.length === 0 && (
-                <p className="text-center text-sm text-gray-500">
-                  {query
-                    ? "No posts match your search."
+            {/* Feed — 2-column waterfall layout */}
+            {visiblePosts.length === 0 ? (
+              <p className="text-center text-sm text-gray-500">
+                {query
+                  ? "No posts match your search."
+                  : feedTab === "following"
+                    ? "No posts yet from people you follow."
                     : "No posts yet — be the first to ask something!"}
-                </p>
-              )}
-              {visiblePosts.map((post) => (
-                <Link
-                  key={post.id}
-                  href={`/post/${post.id}`}
-                  className="block rounded-2xl border border-white/10 bg-neutral-900 p-4 shadow-[0_0_30px_rgba(255,255,255,0.04)] transition hover:border-white/25"
-                >
-                  <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                    <button
-                      onClick={(e) => goToProfile(e, post.author_id)}
-                      className="font-medium text-gray-300 hover:text-white hover:underline"
+              </p>
+            ) : (
+              <div className="columns-1 gap-4 sm:columns-2">
+                {visiblePosts.map((post) => {
+                  const liked = post.likedBy.includes(userId ?? "");
+                  const trending =
+                    post.views >= TRENDING_VIEWS ||
+                    post.likedBy.length >= TRENDING_LIKES;
+
+                  return (
+                    <Link
+                      key={post.id}
+                      href={`/post/${post.id}`}
+                      className="mb-4 block break-inside-avoid rounded-2xl border border-white/10 bg-neutral-900 p-4 shadow-[0_0_30px_rgba(255,255,255,0.04)] transition hover:border-white/25"
                     >
-                      {post.profiles?.username ?? "Someone"}
-                    </button>
-                    {post.tags.map((t) => (
-                      <span
-                        key={t.id}
-                        className="rounded-full bg-white/10 px-2 py-0.5 text-gray-300"
-                      >
-                        {t.name}
-                      </span>
-                    ))}
-                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                    {post.author_id === userId && (
-                      <button
-                        onClick={(e) => handleDelete(e, post.id)}
-                        className="ml-auto text-gray-600 hover:text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-sm font-semibold text-white">
-                    {highlightMatch(post.title, query)}
-                  </p>
-                  {post.body && (
-                    <p className="mt-0.5 text-sm text-gray-200">
-                      {highlightMatch(post.body, query)}
-                    </p>
-                  )}
-                  {post.media_url &&
-                    (post.media_type === "video" ? (
-                      <video
-                        src={post.media_url}
-                        controls
-                        className="mt-2 max-h-80 w-full rounded-lg"
-                      />
-                    ) : (
-                      <img
-                        src={post.media_url}
-                        alt=""
-                        className="mt-2 max-h-80 w-full rounded-lg object-cover"
-                      />
-                    ))}
-                  <button
-                    onClick={(e) =>
-                      toggleLike(e, post.id, post.likedBy.includes(userId ?? ""))
-                    }
-                    className={`mt-2 flex items-center gap-1.5 text-xs font-medium transition ${
-                      post.likedBy.includes(userId ?? "")
-                        ? "text-red-400"
-                        : "text-gray-500 hover:text-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={
-                        post.likedBy.includes(userId ?? "")
-                          ? "drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]"
-                          : ""
-                      }
-                    >
-                      ♥
-                    </span>
-                    {post.likedBy.length}
-                  </button>
-                </Link>
-              ))}
-            </div>
+                      <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                        <button
+                          onClick={(e) => goToProfile(e, post.author_id)}
+                          className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white hover:underline"
+                        >
+                          {post.profiles?.avatar_url ? (
+                            <img
+                              src={post.profiles.avatar_url}
+                              alt=""
+                              className="h-5 w-5 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
+                              {(post.profiles?.username ?? "?")
+                                .slice(0, 1)
+                                .toUpperCase()}
+                            </span>
+                          )}
+                          {post.profiles?.username ?? "Someone"}
+                        </button>
+                        {trending && (
+                          <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]">
+                            Trending
+                          </span>
+                        )}
+                        {post.tags.map((t) => (
+                          <span
+                            key={t.id}
+                            className="rounded-full bg-white/10 px-2 py-0.5 text-gray-300"
+                          >
+                            {t.name}
+                          </span>
+                        ))}
+                        <span>{formatRelativeTime(post.created_at)}</span>
+                        {post.author_id === userId && (
+                          <button
+                            onClick={(e) => handleDelete(e, post.id)}
+                            className="ml-auto text-gray-600 hover:text-red-400"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-white">
+                        {highlightMatch(post.title, query)}
+                      </p>
+                      {post.body && (
+                        <p className="mt-0.5 text-sm text-gray-200">
+                          {highlightMatch(post.body, query)}
+                        </p>
+                      )}
+                      {post.media_url &&
+                        (post.media_type === "video" ? (
+                          <video
+                            src={post.media_url}
+                            controls
+                            className="mt-2 max-h-80 w-full rounded-lg"
+                          />
+                        ) : (
+                          <img
+                            src={post.media_url}
+                            alt=""
+                            className="mt-2 max-h-80 w-full rounded-lg object-cover"
+                          />
+                        ))}
+                      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                        <button
+                          onClick={(e) => toggleLike(e, post.id, liked)}
+                          className={`flex items-center gap-1 font-medium transition ${
+                            liked
+                              ? "text-red-400"
+                              : "text-gray-500 hover:text-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={
+                              liked
+                                ? "drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]"
+                                : ""
+                            }
+                          >
+                            ♥
+                          </span>
+                          {post.likedBy.length}
+                        </button>
+                        <span>
+                          {post.commentCount}{" "}
+                          {post.commentCount === 1 ? "reply" : "replies"}
+                        </span>
+                        <span>{post.views} views</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </main>
       </div>
