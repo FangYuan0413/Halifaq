@@ -2,6 +2,8 @@
 
 A RedNote-style Q&A platform for newcomers and international students in Halifax — CAS project.
 
+**Live:** https://halifaq.netlify.app (deployed via Netlify, auto-redeploys on every `git push` to `main`)
+
 ## Run it locally
 
 You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
@@ -19,7 +21,7 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 
 ## What's here so far
 
-- `app/page.tsx` — landing page at `/`: HalifaQ heading, tagline, glowing background shapes, and "Log in" / "Sign up" buttons.
+- `app/page.tsx` — landing page at `/`: HalifaQ heading, tagline, glowing background shapes, and "Log in" / "Sign up" buttons. Also detects the redirect after someone clicks their email confirmation link and shows a clear "Account confirmed" banner (or an error banner if the link expired).
 - `app/login/page.tsx` and `app/signup/page.tsx` — routes that render the auth form (`components/AuthForm.tsx`), defaulting to the matching tab.
 - `components/AuthForm.tsx` — toggle Log In / Sign Up form, wired to real Supabase auth (`supabase.auth.signInWithPassword` / `supabase.auth.signUp`), with error/info messages. Redirects to `/feed` on success.
 - `app/feed/page.tsx` — the main X-style feed at `/feed`: compose box at the top, category filter pills, live list of posts pulled from Supabase. Redirects to `/login` if you're not signed in. Each post links to its detail page.
