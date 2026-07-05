@@ -24,7 +24,7 @@ export default function AnimatedFavicon() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const TOTAL_FRAMES = 36;
+    const TOTAL_FRAMES = 72;
     let frame = 0;
 
     function draw() {
@@ -71,7 +71,7 @@ export default function AnimatedFavicon() {
     }
 
     draw();
-    const id = setInterval(draw, 90);
+    const id = setInterval(draw, 33); // ~30fps
     return () => clearInterval(id);
   }, []);
 

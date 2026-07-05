@@ -42,7 +42,7 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 - `supabase/profile_fields.sql` — adds a `school` column to `profiles`.
 - `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username, school, bio, Following/Followers/Likes-received stats, a Follow/Unfollow button (hidden on your own profile), an "Edit profile" button (own profile only, opens a modal to change username/school/bio — all public), and a list of that user's posts.
 - `app/layout.tsx` — shared page wrapper, dark (`bg-black`) base theme + site title/metadata, renders `<AnimatedFavicon />`.
-- `components/AnimatedFavicon.tsx` — draws a small rotating cyan arc + pulsing dot onto a canvas and swaps the browser tab's favicon to a fresh frame about 10x/second, giving a genuinely animated site icon (browsers don't reliably support animated .ico files, so this does it in JS instead).
+- `components/AnimatedFavicon.tsx` — draws a small rotating cyan arc + pulsing dot onto a canvas and swaps the browser tab's favicon to a fresh frame about 30x/second, giving a genuinely animated site icon (browsers don't reliably support animated .ico files, so this does it in JS instead).
 - `app/globals.css` — Tailwind setup + the `float-1` through `float-5` keyframe animations used by `BackgroundShapes`.
 
 ## Supabase setup (already done, for reference)
