@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import Logo from "@/components/Logo";
 
 export default function AuthForm({
   defaultMode,
@@ -83,9 +84,7 @@ export default function AuthForm({
         </Link>
 
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-            HalifaQ
-          </h1>
+          <Logo size="text-3xl" className="justify-center" />
           <p className="mt-1 text-sm text-gray-400">
             Ask anything about life in Halifax.
           </p>

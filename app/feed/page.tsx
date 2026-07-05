@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import Logo from "@/components/Logo";
 
 type Category = { id: number; name: string; slug: string };
 type Tag = { id: number; name: string };
@@ -435,9 +436,7 @@ export default function FeedPage() {
       <div className="relative z-10 flex min-h-screen">
         {/* Sidebar */}
         <aside className="hidden w-60 shrink-0 flex-col border-r border-white/10 p-6 sm:flex">
-          <h1 className="mb-8 text-xl font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-            HalifaQ
-          </h1>
+          <Logo size="text-xl" className="mb-8" />
 
           {/* Profile info */}
           <div className="mb-8 rounded-xl border border-white/10 bg-neutral-900 p-3">
@@ -504,9 +503,7 @@ export default function FeedPage() {
           <div className="mx-auto max-w-3xl">
             {/* Mobile-only header (sidebar is hidden below sm) */}
             <div className="mb-6 flex items-center justify-between sm:hidden">
-              <h1 className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                HalifaQ
-              </h1>
+              <Logo size="text-2xl" />
               <button
                 onClick={handleLogout}
                 className="text-xs font-medium text-gray-500 hover:text-gray-300"

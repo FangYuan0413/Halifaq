@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import Logo from "@/components/Logo";
 import { createClient } from "@/utils/supabase/client";
 
 export default function LandingPage() {
@@ -59,9 +60,7 @@ export default function LandingPage() {
           </div>
         )}
 
-        <h1 className="text-5xl font-semibold tracking-tight text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.35)] sm:text-6xl">
-          HalifaQ
-        </h1>
+        <Logo size="text-5xl sm:text-6xl" />
         <p className="mt-4 max-w-sm text-base text-gray-400">
           Ask anything about life in Halifax. Answered by people who actually
           live it.
