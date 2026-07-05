@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Dancing_Script } from "next/font/google";
 import "./globals.css";
+import AnimatedFavicon from "@/components/AnimatedFavicon";
 
 // A connected script font used for the HalifaQ wordmark (see
 // components/Logo.tsx), set at its bold weight. Exposed as the --font-logo
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${logoFont.variable} bg-black text-white`}>
+        <AnimatedFavicon />
         {children}
       </body>
     </html>

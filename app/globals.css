@@ -132,3 +132,60 @@
 .animate-pulse-scale {
   animation: pulse-scale 2s ease-in-out infinite;
 }
+
+/* Breathing cyan glow for the logo's "Q" */
+@keyframes pulse-glow-cyan {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(103, 232, 249, 0.9));
+  }
+}
+
+.animate-pulse-glow-cyan {
+  animation: pulse-glow-cyan 3s ease-in-out infinite;
+}
+
+/* Quick light sweep across the logo, masked to the signature's shape.
+   Fast pass near the start of the cycle, then a long idle gap. */
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-150%) skewX(-12deg);
+  }
+  20% {
+    transform: translateX(350%) skewX(-12deg);
+  }
+  20.01%,
+  100% {
+    transform: translateX(-150%) skewX(-12deg);
+  }
+}
+
+.animate-shimmer-sweep {
+  animation: shimmer-sweep 3.5s ease-in-out infinite;
+}
+
+/* Cyan particle burst, timed to fire as the shimmer sweep reaches the "Q" */
+@keyframes spark-burst {
+  0%,
+  15% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  24% {
+    transform: translate(var(--spark-x), var(--spark-y)) scale(1);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-spark-burst {
+  animation: spark-burst 3.5s ease-out infinite;
+}

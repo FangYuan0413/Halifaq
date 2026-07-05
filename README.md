@@ -27,7 +27,8 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 - `app/feed/page.tsx` — the main feed at `/feed`, laid out as a 2-column waterfall grid (1 column on mobile) like RedNote/Pinterest. "All" / "Following" tabs, category filter, live posts from Supabase. Each card shows relative time ("2h ago"), reply count, view count, a "Trending" badge once a post crosses 50 views or 5 likes, and links to the post's detail page. Redirects to `/login` if you're not signed in.
 - `app/post/[id]/page.tsx` — post detail page: full post, reply box, and the list of replies (comments), all pulled live from Supabase.
 - `components/BackgroundShapes.tsx` — shared decorative background (glowing white triangles/squares/circles) used on every page.
-- `components/Logo.tsx` — the HalifaQ wordmark: a dynamic cyan "radar" mark (two counter-rotating arced rings + a pulsing center dot), "Halifa" in a white-to-gray gradient, the "Q" picked out in the same cyan accent, all with a breathing glow animation. Set in Dancing Script at bold weight (a connected script font, loaded via `next/font/google` in `app/layout.tsx` as the `--font-logo` CSS variable) rather than the default body font. Used on the landing page, feed sidebar/mobile header, and auth form so the brand looks consistent everywhere.
+- `components/Logo.tsx` — the HalifaQ wordmark: your mom's real handwritten signature, split into two layers — "Halifax" dim off-white (static) and "Q" glowing cyan (breathing pulse) — with a quick light sweep that passes across the signature every few seconds (masked to its own silhouette) and finishes with a small cyan particle burst timed to land on the Q. Used on the landing page, feed sidebar/mobile header, and auth form so the brand looks consistent everywhere.
+- `public/signature-halifax.png`, `public/signature-q.png`, `public/signature-mask.png` — the three processed logo layers (dim "Halifax", cyan "Q", and a plain white silhouette used as a CSS mask for the shimmer). Source photo is `Weixin Image_20260705004706_162_29.jpg` in the project root; see git history for the cropping/recoloring script if it ever needs regenerating from a new photo.
 - `utils/supabase/client.ts` — creates the Supabase browser client using the keys in `.env.local`.
 - `.env.local` — holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (not committed to git — see `.gitignore`).
 - `supabase/schema.sql` — the database schema (profiles, categories, posts, comments + RLS policies). Safe to re-run — every `create policy` has a matching `drop policy if exists` first.
@@ -40,7 +41,8 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 - `supabase/avatars_setup.sql` — creates the public `avatars` storage bucket with per-user upload policies.
 - `supabase/profile_fields.sql` — adds a `school` column to `profiles`.
 - `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username, school, bio, Following/Followers/Likes-received stats, a Follow/Unfollow button (hidden on your own profile), an "Edit profile" button (own profile only, opens a modal to change username/school/bio — all public), and a list of that user's posts.
-- `app/layout.tsx` — shared page wrapper, dark (`bg-black`) base theme + site title/metadata.
+- `app/layout.tsx` — shared page wrapper, dark (`bg-black`) base theme + site title/metadata, renders `<AnimatedFavicon />`.
+- `components/AnimatedFavicon.tsx` — draws a small rotating cyan arc + pulsing dot onto a canvas and swaps the browser tab's favicon to a fresh frame about 10x/second, giving a genuinely animated site icon (browsers don't reliably support animated .ico files, so this does it in JS instead).
 - `app/globals.css` — Tailwind setup + the `float-1` through `float-5` keyframe animations used by `BackgroundShapes`.
 
 ## Supabase setup (already done, for reference)
