@@ -1,0 +1,59 @@
+# HalifaQ
+
+A RedNote-style Q&A platform for newcomers and international students in Halifax — CAS project.
+
+## Run it locally
+
+You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
+
+1. Open a terminal in this `halifaq` folder.
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Start the dev server:
+   ```
+   npm run dev
+   ```
+4. Open `http://localhost:3000` in your browser.
+
+## What's here so far
+
+- `app/page.tsx` — landing page at `/`: HalifaQ heading, tagline, glowing background shapes, and "Log in" / "Sign up" buttons.
+- `app/login/page.tsx` and `app/signup/page.tsx` — routes that render the auth form (`components/AuthForm.tsx`), defaulting to the matching tab.
+- `components/AuthForm.tsx` — toggle Log In / Sign Up form, wired to real Supabase auth (`supabase.auth.signInWithPassword` / `supabase.auth.signUp`), with error/info messages. Redirects to `/feed` on success.
+- `app/feed/page.tsx` — the main X-style feed at `/feed`: compose box at the top, category filter pills, live list of posts pulled from Supabase. Redirects to `/login` if you're not signed in. Each post links to its detail page.
+- `app/post/[id]/page.tsx` — post detail page: full post, reply box, and the list of replies (comments), all pulled live from Supabase.
+- `components/BackgroundShapes.tsx` — shared decorative background (glowing white triangles/squares/circles) used on every page.
+- `utils/supabase/client.ts` — creates the Supabase browser client using the keys in `.env.local`.
+- `.env.local` — holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (not committed to git — see `.gitignore`).
+- `supabase/schema.sql` — the database schema (profiles, categories, posts, comments + RLS policies). Safe to re-run — every `create policy` has a matching `drop policy if exists` first.
+- `supabase/backfill_profiles.sql` — one-time fix for accounts created before the auto-profile trigger existed.
+- `supabase/media_setup.sql` — adds `media_url`/`media_type` columns to `posts`, creates the public `post-media` storage bucket, and sets its access policies.
+- `supabase/add_categories.sql` — adds the Music/Sports/Tech/Politics categories (also folded into `schema.sql`'s seed list for fresh installs).
+- `supabase/multi_tags.sql` — adds the `post_categories` join table so a post can carry multiple tags instead of one. `posts.category_id` is no longer used by the app.
+- `supabase/post_views.sql` — adds a `views` counter to posts plus an `increment_post_views` function, called once each time someone opens a post's detail page.
+- `supabase/social.sql` — adds `follows` (following/followers) and `post_likes` tables, with RLS.
+- `supabase/avatars_setup.sql` — creates the public `avatars` storage bucket with per-user upload policies.
+- `supabase/profile_fields.sql` — adds a `school` column to `profiles`.
+- `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username, school, bio, Following/Followers/Likes-received stats, a Follow/Unfollow button (hidden on your own profile), an "Edit profile" button (own profile only, opens a modal to change username/school/bio — all public), and a list of that user's posts.
+- `app/layout.tsx` — shared page wrapper, dark (`bg-black`) base theme + site title/metadata.
+- `app/globals.css` — Tailwind setup + the `float-1` through `float-5` keyframe animations used by `BackgroundShapes`.
+
+## Supabase setup (already done, for reference)
+
+1. `npm install` pulls in `@supabase/supabase-js` and `@supabase/ssr`.
+2. In the Supabase dashboard: **Authentication → Providers → Email**, the "Confirm email" toggle is off for development so signing up logs you in immediately. Turn it back on before real users sign up.
+3. Run once, in order: `supabase/schema.sql`, `supabase/media_setup.sql`, `supabase/add_categories.sql`, `supabase/multi_tags.sql`, `supabase/post_views.sql`, `supabase/social.sql`, `supabase/avatars_setup.sql`, `supabase/profile_fields.sql`.
+
+## Features so far
+
+Sign up / log in, post a question (required title, optional body text, optional one photo or video) tagged with multiple categories, like posts, follow other users, search by keyword, filter by one or more categories from the sidebar, open a post to read/write replies, delete your own posts, view and edit your profile (username, school, bio, avatar — all public) and see anyone's profile (their stats + their posts) by clicking their name or your own profile card in the sidebar. Focusing the search bar shows a dropdown: with no text typed it's "Popular searches" (categories ranked by total post views, needs 200+ combined views to qualify); once you type, it shows two side-by-side columns — matching "People" (click to jump to their profile) and matching "Posts" (click to open) — while the full feed list below also filters to the same keyword. Search is case-insensitive everywhere, and the matched keyword is highlighted in yellow within post titles/bodies so it's clear why each post matched.
+
+## Design system
+
+Dark theme: black background, white text, `neutral-900` cards with subtle white/10 borders, white-fill or white-outline buttons. Background shapes come from the shared `BackgroundShapes` component — don't rebuild them per-page.
+
+## Next step
+
+Consider: a "protected route" middleware so pages check auth server-side instead of each client component redirecting after the fact; pagination/infinite scroll once the feed has many posts; notifications when someone replies to or likes your post.

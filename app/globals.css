@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Flowing background shapes on the landing page */
+@keyframes float-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(30px, -40px) rotate(15deg);
+  }
+}
+
+@keyframes float-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(-40px, 30px) rotate(-20deg);
+  }
+}
+
+@keyframes float-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, 20px) scale(1.08);
+  }
+}
+
+@keyframes float-4 {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate(-25px, 25px) rotate(25deg) scale(1.05);
+  }
+}
+
+@keyframes float-5 {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(35px, 15px) rotate(-10deg);
+  }
+}
+
+.animate-float-1 {
+  animation: float-1 11s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-2 14s ease-in-out infinite;
+}
+
+.animate-float-3 {
+  animation: float-3 17s ease-in-out infinite;
+}
+
+.animate-float-4 {
+  animation: float-4 15s ease-in-out infinite;
+}
+
+.animate-float-5 {
+  animation: float-5 19s ease-in-out infinite;
+}
