@@ -341,10 +341,12 @@ export default function FeedPage() {
         .delete()
         .eq("post_id", postId)
         .eq("user_id", userId);
+      showToast("Unliked");
     } else {
       await supabase
         .from("post_likes")
         .insert({ post_id: postId, user_id: userId });
+      showToast("Liked!");
     }
   }
 
