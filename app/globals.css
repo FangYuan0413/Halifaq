@@ -189,3 +189,24 @@
 .animate-spark-burst {
   animation: spark-burst 3.5s ease-out infinite;
 }
+
+/* Quick light sweep across the "Halifa" text itself (gradient position,
+   clipped to the glyphs via background-clip: text) — same fast-pass-then-
+   idle timing as the other logo effects. */
+@keyframes text-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  20% {
+    background-position: -100% 0;
+  }
+  20.01%,
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-text-shimmer {
+  background-size: 250% 100%;
+  animation: text-shimmer 3.5s ease-in-out infinite;
+}

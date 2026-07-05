@@ -1,9 +1,12 @@
-// Reusable HalifaQ wordmark: a dynamic cyan "radar" mark — two counter-
-// rotating arced rings with a pulsing center dot — plus "Halifa" in a
-// white-to-gray gradient set in a bold, connected script font, with the "Q"
-// picked out in the same cyan accent so the pun reads clearly. Everything
-// breathes with a slow glow pulse. Used anywhere the brand name appears so
-// it stays consistent.
+// Reusable HalifaQ wordmark: a dynamic cyan "radar" mark (two counter-
+// rotating arced rings + a pulsing center dot), "Halifa" set in a bold
+// connected script font with a quick light shimmer sweeping through it
+// every few seconds, and the "Q" picked out in glowing cyan with a small
+// particle burst timed to land right on it as the shimmer passes. Used
+// anywhere the brand name appears so it stays consistent.
+const SPARK_ANGLES = [0, 60, 120, 180, 240, 300];
+const SPARK_DISTANCE_EM = 0.35;
+
 export default function Logo({
   size = "text-3xl",
   className = "",
@@ -53,10 +56,40 @@ export default function Logo({
           style={{ transformOrigin: "22px 22px" }}
         />
       </svg>
-      <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text font-[family-name:var(--font-logo)] text-[1.4em] font-bold leading-none text-transparent">
-        Halifa
-        <span className="text-cyan-300 drop-shadow-[0_0_10px_rgba(103,232,249,0.8)]">
+
+      <span className="font-[family-name:var(--font-logo)] text-[1.4em] font-bold leading-none">
+        <span
+          className="animate-text-shimmer bg-gradient-to-r from-gray-400 via-white to-gray-400 bg-clip-text text-transparent"
+          style={{ backgroundSize: "250% 100%" }}
+        >
+          Halifa
+        </span>
+        <span className="relative text-cyan-300 drop-shadow-[0_0_10px_rgba(103,232,249,0.8)]">
           Q
+          {/* Cyan particle burst, timed to land on the Q as the shimmer passes */}
+          <span
+            className="pointer-events-none absolute left-1/2 top-1/2"
+            aria-hidden
+          >
+            {SPARK_ANGLES.map((angle, i) => {
+              const rad = (angle * Math.PI) / 180;
+              const x = (Math.cos(rad) * SPARK_DISTANCE_EM).toFixed(3);
+              const y = (Math.sin(rad) * SPARK_DISTANCE_EM).toFixed(3);
+              return (
+                <span
+                  key={angle}
+                  className="animate-spark-burst absolute h-[0.1em] w-[0.1em] rounded-full bg-cyan-300"
+                  style={
+                    {
+                      "--spark-x": `${x}em`,
+                      "--spark-y": `${y}em`,
+                      animationDelay: `${i * 0.02}s`,
+                    } as React.CSSProperties
+                  }
+                />
+              );
+            })}
+          </span>
         </span>
       </span>
     </span>
