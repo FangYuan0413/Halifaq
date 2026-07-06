@@ -679,7 +679,7 @@ export default function FeedPage() {
             </button>
             {categories.map((c) =>
               theme === "miku" && c.slug === "daily-life" ? (
-                <DailyLifeMikuButton key={c.id} className="my-1 h-9 w-full" />
+                <DailyLifeMikuButton key={c.id} className="my-2 h-10 self-start" />
               ) : (
                 <Link
                   key={c.id}
@@ -1012,7 +1012,7 @@ export default function FeedPage() {
               </button>
               {categories.map((c) =>
                 theme === "miku" && c.slug === "daily-life" ? (
-                  <DailyLifeMikuButton key={c.id} className="h-7 px-4" />
+                  <DailyLifeMikuButton key={c.id} className="h-8" />
                 ) : (
                   <Link
                     key={c.id}
