@@ -10,6 +10,7 @@ import PostCard from "@/components/PostCard";
 import { useToast } from "@/components/ToastProvider";
 import { keywordRelevanceScore } from "@/utils/postDisplay";
 import { loadSearchHistory, addSearchHistoryTerm } from "@/utils/searchHistory";
+import Spinner from "@/components/Spinner";
 
 type Tag = { id: number; name: string };
 
@@ -172,7 +173,10 @@ export default function SearchResults() {
   if (loadingAuth) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <div className="flex flex-col items-center gap-3">
+          <Spinner className="h-8 w-8" />
+          <p className="text-sm text-gray-500">Loading…</p>
+        </div>
       </main>
     );
   }
@@ -210,13 +214,20 @@ export default function SearchResults() {
         />
 
         {query && (
-          <p className="mb-4 text-sm text-gray-400">
-            {loadingResults
-              ? "Searching…"
-              : results.length > 0
-                ? `${results.length} ${results.length === 1 ? "result" : "results"} for “${query}”, closest match first`
-                : `No related posts found for “${query}”.`}
-          </p>
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-400">
+            {loadingResults ? (
+              <>
+                <Spinner className="h-4 w-4" />
+                <span>Searching…</span>
+              </>
+            ) : (
+              <p>
+                {results.length > 0
+                  ? `${results.length} ${results.length === 1 ? "result" : "results"} for “${query}”, closest match first`
+                  : `No related posts found for “${query}”.`}
+              </p>
+            )}
+          </div>
         )}
 
         {!loadingResults && query && results.length === 0 && (
