@@ -132,6 +132,10 @@ export default function FeedPage() {
       )
       .order("created_at", { ascending: false });
 
+    if (error) {
+      console.error("loadPosts failed", error);
+    }
+
     if (!error && data) {
       const withTags = (data as unknown as RawPost[]).map((p) => ({
         ...p,
