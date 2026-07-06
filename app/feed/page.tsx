@@ -113,6 +113,50 @@ export default function FeedPage() {
     }
   }
 
+  // Recent search terms, kept in this browser only (localStorage) — shows
+  // above "Popular searches" when the search box is empty. Capped at 30
+  // stored, but only the first 10 show until "Show more" is clicked.
+  const HISTORY_KEY = "halifaq_search_history";
+  const HISTORY_VISIBLE_COUNT = 10;
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) setSearchHistory(JSON.parse(raw));
+    } catch {
+      // localStorage unavailable (private browsing, etc.) — just skip history
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function saveHistory(next: string[]) {
+    setSearchHistory(next);
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+    } catch {
+      // ignore — history just won't persist this session
+    }
+  }
+
+  function addToHistory(term: string) {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    saveHistory(
+      [trimmed, ...searchHistory.filter((h) => h !== trimmed)].slice(0, 30)
+    );
+  }
+
+  function removeFromHistory(term: string) {
+    saveHistory(searchHistory.filter((h) => h !== term));
+  }
+
+  function clearHistory() {
+    saveHistory([]);
+    setHistoryExpanded(false);
+  }
+
   useEffect(() => {
     async function init() {
       const {
@@ -612,6 +656,11 @@ export default function FeedPage() {
                 onBlur={() =>
                   setTimeout(() => setShowSearchDropdown(false), 150)
                 }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    addToHistory(searchQuery.trim());
+                  }
+                }}
                 placeholder="Search posts or people…"
                 className="w-full rounded-full border border-white/10 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40"
               />
@@ -681,6 +730,67 @@ export default function FeedPage() {
                     </div>
                   ) : (
                     <>
+                      {searchHistory.length > 0 && (
+                        <div className="mb-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                              Search history
+                            </p>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={clearHistory}
+                              className="text-xs text-gray-500 hover:text-white"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(historyExpanded
+                              ? searchHistory
+                              : searchHistory.slice(0, HISTORY_VISIBLE_COUNT)
+                            ).map((term) => (
+                              <div
+                                key={term}
+                                className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 py-1 pl-3 pr-1.5 text-xs text-gray-300"
+                              >
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setSearchQuery(term);
+                                    addToHistory(term);
+                                  }}
+                                  className="max-w-[9rem] truncate hover:text-white"
+                                >
+                                  {term}
+                                </button>
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => removeFromHistory(term)}
+                                  aria-label={`Remove "${term}" from history`}
+                                  className="text-gray-600 hover:text-white"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          {searchHistory.length > HISTORY_VISIBLE_COUNT && (
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => setHistoryExpanded((v) => !v)}
+                              className="mt-2 flex w-full items-center justify-center gap-1 text-xs text-gray-500 hover:text-white"
+                            >
+                              {historyExpanded ? "Show less" : "Show more"}
+                              <span>{historyExpanded ? "▲" : "▼"}</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">
                         Popular searches
                       </p>
