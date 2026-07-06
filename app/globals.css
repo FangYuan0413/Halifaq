@@ -242,3 +242,189 @@
 .animate-toast-in {
   animation: toast-in 0.25s ease-out;
 }
+
+/* ============================================================
+   Color themes (Dark / Light / Miku)
+   ------------------------------------------------------------
+   The app is built almost entirely with literal Tailwind utility
+   classes (bg-black, text-white, bg-neutral-900, border-white/10,
+   etc.) rather than CSS variables, so instead of touching every
+   component, alternate themes are applied by re-targeting those
+   exact compiled class names underneath a [data-theme="..."]
+   scope on <html>. "dark" needs no rules (it's already what the
+   base classes render). Opacity-suffixed black classes used for
+   modal backdrops and image-overlay buttons (bg-black/40, /60,
+   /70, /80, /90) are intentionally left alone in every theme —
+   a dimmed backdrop or an overlay button on top of a photo should
+   stay dark regardless of the page theme.
+   ============================================================ */
+
+[data-theme="light"] .bg-black,
+[data-theme="light"] .hover\:bg-black:hover {
+  background-color: #ffffff;
+}
+[data-theme="light"] .bg-neutral-900 {
+  background-color: #f6f6f7;
+}
+[data-theme="light"] .bg-neutral-900\/95 {
+  background-color: rgba(246, 246, 247, 0.95);
+}
+[data-theme="light"] .text-white {
+  color: #18181b;
+}
+[data-theme="light"] .text-black {
+  color: #ffffff;
+}
+[data-theme="light"] .bg-white {
+  background-color: #18181b;
+}
+[data-theme="light"] .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .border-white\/20,
+[data-theme="light"] .hover\:border-white\/25:hover {
+  border-color: rgba(0, 0, 0, 0.22);
+}
+[data-theme="light"] .focus\:border-white\/40:focus {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+[data-theme="light"] .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.045);
+}
+[data-theme="light"] .bg-white\/10,
+[data-theme="light"] .hover\:bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.07);
+}
+[data-theme="light"] .hover\:bg-white\/5:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .hover\:bg-white\/20:hover {
+  background-color: rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .ring-white\/20 {
+  --tw-ring-color: rgba(0, 0, 0, 0.2);
+}
+[data-theme="light"] .ring-white\/30 {
+  --tw-ring-color: rgba(0, 0, 0, 0.3);
+}
+[data-theme="light"] .focus\:ring-white\/40:focus {
+  --tw-ring-color: rgba(0, 0, 0, 0.35);
+}
+[data-theme="light"] .text-gray-100 {
+  color: #18181b;
+}
+[data-theme="light"] .text-gray-200 {
+  color: #27272a;
+}
+[data-theme="light"] .text-gray-300,
+[data-theme="light"] .hover\:text-gray-300:hover {
+  color: #3f3f46;
+}
+[data-theme="light"] .text-gray-400 {
+  color: #52525b;
+}
+[data-theme="light"] .text-gray-500 {
+  color: #6b6b74;
+}
+[data-theme="light"] .text-gray-600 {
+  color: #9d9da4;
+}
+[data-theme="light"] .placeholder\:text-gray-600::placeholder {
+  color: #a8a8af;
+}
+[data-theme="light"] .hover\:text-white:hover {
+  color: #18181b;
+}
+
+/* Miku: a deep teal-black page instead of pure black, cool teal-tinted
+   grays, and Miku's signature #39C5BB teal standing in for "white"
+   backgrounds/rings/borders. The app's existing cyan accents (logo,
+   admin badge, "Reply to" tag) already sit close to this color, so
+   they read as part of the theme without needing their own overrides. */
+[data-theme="miku"] .bg-black,
+[data-theme="miku"] .hover\:bg-black:hover {
+  background-color: #071614;
+}
+[data-theme="miku"] .bg-neutral-900 {
+  background-color: #0e2320;
+}
+[data-theme="miku"] .bg-neutral-900\/95 {
+  background-color: rgba(14, 35, 32, 0.95);
+}
+[data-theme="miku"] .text-white {
+  color: #eafffb;
+}
+[data-theme="miku"] .text-black {
+  color: #04211d;
+}
+[data-theme="miku"] .bg-white {
+  background-color: #39c5bb;
+}
+[data-theme="miku"] .border-white\/10 {
+  border-color: rgba(57, 197, 187, 0.16);
+}
+[data-theme="miku"] .border-white\/20,
+[data-theme="miku"] .hover\:border-white\/25:hover {
+  border-color: rgba(57, 197, 187, 0.32);
+}
+[data-theme="miku"] .focus\:border-white\/40:focus {
+  border-color: rgba(57, 197, 187, 0.55);
+}
+[data-theme="miku"] .bg-white\/5 {
+  background-color: rgba(57, 197, 187, 0.07);
+}
+[data-theme="miku"] .bg-white\/10,
+[data-theme="miku"] .hover\:bg-white\/10:hover {
+  background-color: rgba(57, 197, 187, 0.13);
+}
+[data-theme="miku"] .hover\:bg-white\/5:hover {
+  background-color: rgba(57, 197, 187, 0.08);
+}
+[data-theme="miku"] .hover\:bg-white\/20:hover {
+  background-color: rgba(57, 197, 187, 0.2);
+}
+[data-theme="miku"] .ring-white\/20 {
+  --tw-ring-color: rgba(57, 197, 187, 0.3);
+}
+[data-theme="miku"] .ring-white\/30 {
+  --tw-ring-color: rgba(57, 197, 187, 0.4);
+}
+[data-theme="miku"] .focus\:ring-white\/40:focus {
+  --tw-ring-color: rgba(57, 197, 187, 0.55);
+}
+[data-theme="miku"] .text-gray-100 {
+  color: #eafffb;
+}
+[data-theme="miku"] .text-gray-200 {
+  color: #cdece8;
+}
+[data-theme="miku"] .text-gray-300,
+[data-theme="miku"] .hover\:text-gray-300:hover {
+  color: #a9d9d3;
+}
+[data-theme="miku"] .text-gray-400 {
+  color: #86bdb6;
+}
+[data-theme="miku"] .text-gray-500 {
+  color: #6b9c96;
+}
+[data-theme="miku"] .text-gray-600 {
+  color: #4d726d;
+}
+[data-theme="miku"] .placeholder\:text-gray-600::placeholder {
+  color: #4d726d;
+}
+[data-theme="miku"] .hover\:text-white:hover {
+  color: #eafffb;
+}
+
+/* Decorative background shapes (BackgroundShapes.tsx) are drawn with
+   fill="white" directly on the SVG children; retint them per theme. A
+   plain CSS `fill` declaration beats an SVG presentation attribute in the
+   cascade, so no !important is needed. */
+[data-theme="light"] .bg-shape * {
+  fill: #18181b;
+}
+[data-theme="miku"] .bg-shape * {
+  fill: #39c5bb;
+}

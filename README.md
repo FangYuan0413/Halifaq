@@ -52,22 +52,25 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 - `supabase/category_views.sql` — adds a `views` counter to `categories` plus an `increment_category_views` function, bumped once each time someone opens that category's `/category/[slug]` page.
 - `supabase/admin.sql` — adds `profiles.is_admin`, a `warnings` table (a warning an admin sends a user, optionally about a specific post), and updates the posts delete policy so admins can delete anyone's post, not just their own. Also grants admin to `lucasfan0413@gmail.com` (edit the email in the script to change who the admin is).
 - `supabase/messages.sql` — adds the `messages` table (DMs: sender, recipient, optional text, optional photo/video, read flag) with RLS enforcing the 3-message cap for non-followers, a public `message-media` storage bucket, and `profiles.last_seen_activity_at` (the inbox's unread cursor).
+- `supabase/theme.sql` — adds `profiles.theme` (`dark` | `light` | `miku`, defaults to `dark`).
 - `components/AdminBadge.tsx` — the small cyan "Admin" pill shown next to an admin's name wherever it appears (sidebar, profile header, post/reply bylines).
 - `components/InboxIcon.tsx` — the envelope button (sidebar + mobile header) linking to `/messages`, with a red badge showing the unread count (unread DMs plus likes/replies since you last checked); polls every 30s so it doesn't go stale while the tab is open.
 - `app/messages/page.tsx` — the inbox: Chats (your DM threads, newest first, unread ones bolded with a red dot), Likes (grouped per post — "X and N others liked your post" — click to open that post), Replies (comments/replies on your posts or your own comments, click to open that post), and Mentions (placeholder — @mentions aren't parsed/tracked anywhere yet). Opening Likes or Replies bumps `profiles.last_seen_activity_at`, which is what the inbox badge counts against.
 - `app/messages/[userId]/page.tsx` — a single DM conversation: message history (text and/or one photo/video per message) in left/right bubbles, marks incoming messages read on open, and lets you send a new one. If you don't follow the other person, you're capped at 3 messages total to them until they follow you back (enforced both in the UI and by the database RLS policy).
 - `utils/notifications.ts` — `getUnreadInboxCount` (DMs + likes + replies since your last-seen cursor) and `markActivitySeen` (bumps that cursor), shared by `InboxIcon` and the inbox page.
 - `components/MediaCarousel.tsx` — renders a post's photo(s)/video; if there's more than one image, shows left/right arrows and a "2/5" counter so viewers can step through them. Clicking a photo opens it fullscreen (same arrow/counter, plus Esc, backdrop click, or the × button to close). While fullscreen, a bottom zoom bar (− button, slider, + button, live percentage) lets viewers dial in a zoom level directly; scroll wheel, double-click, and two-finger pinch (mobile) also zoom, and dragging pans around once zoomed in. Used in the feed, post detail, and profile pages.
-- `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username (with an Admin badge if applicable), school, bio, Following/Followers/Likes-received stats, a "Message" button + Follow/Unfollow button (hidden on your own profile — replaced by "Edit profile", which opens a modal to change username/school/bio — all public), and a list of that user's posts.
+- `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username (with an Admin badge if applicable), school, bio, Following/Followers/Likes-received stats, a "Message" button + Follow/Unfollow button (hidden on your own profile — replaced by "Edit profile" and a "Theme" picker, own profile only), and a list of that user's posts.
 - `app/layout.tsx` — shared page wrapper, dark (`bg-black`) base theme + site title/metadata.
 - `app/icon.png`, `app/apple-icon.png` — the static favicon/site icon (Next.js's file-based convention picks these up automatically, no code needed): the same cyan radar mark from the logo, on a black rounded badge. We tried an animated JS-driven favicon first, but a real browser tab renders favicons at ~16px and can't reliably refresh faster than ~10-30x/second no matter what — pushing for 120fps wasn't realistic, so this is a clean static icon instead.
 - `app/globals.css` — Tailwind setup + the `float-1` through `float-5` keyframe animations used by `BackgroundShapes`.
+- `utils/theme.ts` — the `Theme` type (`"dark" | "light" | "miku"`), `applyTheme` (sets `<html data-theme>` + caches to `localStorage`), and `getCachedTheme`.
+- `components/ThemeApplier.tsx` — mounted once in `app/layout.tsx`; reconciles the signed-in user's saved `profiles.theme` with whatever the no-flash inline script in `<head>` already applied from `localStorage`.
 
 ## Supabase setup (already done, for reference)
 
 1. `npm install` pulls in `@supabase/supabase-js` and `@supabase/ssr`.
 2. In the Supabase dashboard: **Authentication → Providers → Email**, the "Confirm email" toggle is off for development so signing up logs you in immediately. Turn it back on before real users sign up.
-3. Run once, in order: `supabase/schema.sql`, `supabase/media_setup.sql`, `supabase/add_categories.sql`, `supabase/multi_tags.sql`, `supabase/post_views.sql`, `supabase/social.sql`, `supabase/avatars_setup.sql`, `supabase/profile_fields.sql`, `supabase/post_media.sql`, `supabase/comment_media.sql`, `supabase/nested_replies.sql`, `supabase/category_views.sql`, `supabase/admin.sql`, `supabase/messages.sql`.
+3. Run once, in order: `supabase/schema.sql`, `supabase/media_setup.sql`, `supabase/add_categories.sql`, `supabase/multi_tags.sql`, `supabase/post_views.sql`, `supabase/social.sql`, `supabase/avatars_setup.sql`, `supabase/profile_fields.sql`, `supabase/post_media.sql`, `supabase/comment_media.sql`, `supabase/nested_replies.sql`, `supabase/category_views.sql`, `supabase/admin.sql`, `supabase/messages.sql`, `supabase/theme.sql`.
 
 ## Features so far
 
@@ -98,6 +101,14 @@ An admin's name also carries a small cyan **Admin** badge (`components/AdminBadg
 
 - **Delete any post** — the "Delete" button shows on every post for an admin, not just their own.
 - **Send a warning** — a "Warn" button (hidden on your own posts) opens a modal to write a message; it's saved to the `warnings` table tied to that post's author. Next time the warned user loads the feed, a blocking modal lists every unread warning (with the post it was about) and requires clicking "I understand" before it's marked read and dismissed.
+
+## Color themes
+
+Three themes — Dark (default), Light, and Miku (Hatsune Miku's signature teal, `#39C5BB`) — picked from a "Theme" section on your own profile page, saved to `profiles.theme`, and applied instantly.
+
+Rather than rewriting every component's color classes, alternate themes work by re-targeting the exact compiled Tailwind class names (`bg-black`, `text-white`, `bg-neutral-900`, `border-white/10`, the `text-gray-100`–`600` scale, etc.) underneath a `[data-theme="..."]` selector in `app/globals.css` — see the "Color themes" section there for the full rule set. This keeps every page's actual markup untouched; only the CSS changes. Two things are intentionally left alone in every theme: modal backdrops / overlay buttons that use black at partial opacity (e.g. `bg-black/70`) stay dark regardless of theme, since dimming the background is a theme-agnostic pattern; and the soft glow shadows on cards (the `shadow-[...rgba(255,255,255,...)]` arbitrary values) don't retint, so they're barely visible outside the Dark theme — a minor cosmetic trade-off for not having to touch every file.
+
+A tiny inline script in `<head>` (`app/layout.tsx`) applies whatever theme is cached in `localStorage` before the page paints, so switching pages or reloading doesn't flash the default Dark theme first.
 
 ## Design system
 

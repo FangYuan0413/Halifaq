@@ -8,6 +8,7 @@ import BackgroundShapes from "@/components/BackgroundShapes";
 import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
 import AdminBadge from "@/components/AdminBadge";
+import { applyTheme, Theme, THEMES } from "@/utils/theme";
 
 type Tag = { id: number; name: string };
 
@@ -18,7 +19,14 @@ type ProfileInfo = {
   school: string | null;
   avatar_url: string | null;
   is_admin: boolean;
+  theme: Theme;
 };
+
+const THEME_OPTIONS: { value: Theme; label: string; swatchClass: string }[] = [
+  { value: "dark", label: "Dark", swatchClass: "bg-black ring-1 ring-white/30" },
+  { value: "light", label: "Light", swatchClass: "bg-white ring-1 ring-black/20" },
+  { value: "miku", label: "Miku", swatchClass: "bg-[#39C5BB]" },
+];
 
 type Post = {
   id: string;
@@ -65,6 +73,8 @@ export default function ProfilePage() {
   const [editBio, setEditBio] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>("dark");
+  const [savingTheme, setSavingTheme] = useState(false);
 
   const isOwnProfile = currentUserId === profileId;
   const likesReceived = posts.reduce((sum, p) => sum + p.likeCount, 0);
@@ -85,7 +95,7 @@ export default function ProfilePage() {
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, bio, school, avatar_url, is_admin")
+        .select("id, username, bio, school, avatar_url, is_admin, theme")
         .eq("id", profileId)
         .single();
 
@@ -97,6 +107,9 @@ export default function ProfilePage() {
       setEditUsername(profileData.username ?? "");
       setEditSchool(profileData.school ?? "");
       setEditBio(profileData.bio ?? "");
+      if (user.id === profileId && THEMES.includes(profileData.theme)) {
+        setTheme(profileData.theme);
+      }
 
       const { data: postsData } = await supabase
         .from("posts")
@@ -257,6 +270,26 @@ export default function ProfilePage() {
     setFollowBusy(false);
   }
 
+  async function handleSelectTheme(next: Theme) {
+    if (!currentUserId || savingTheme) return;
+    setSavingTheme(true);
+    applyTheme(next);
+    setTheme(next);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ theme: next })
+      .eq("id", currentUserId);
+
+    setSavingTheme(false);
+
+    if (error) {
+      showToast(`Couldn't save theme — ${error.message}`, "error");
+    } else {
+      showToast("Theme updated!");
+    }
+  }
+
   if (loadingAuth) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black">
@@ -391,6 +424,33 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {isOwnProfile && (
+          <div className="mb-6 rounded-2xl border border-white/10 bg-neutral-900 p-4 shadow-[0_0_30px_rgba(255,255,255,0.04)]">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">
+              Theme
+            </p>
+            <div className="flex gap-3">
+              {THEME_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleSelectTheme(opt.value)}
+                  className={`flex flex-1 flex-col items-center gap-2 rounded-xl border p-3 transition ${
+                    theme === opt.value
+                      ? "border-white/40 bg-white/10"
+                      : "border-white/10 hover:bg-white/5"
+                  }`}
+                >
+                  <span className={`h-8 w-8 rounded-full ${opt.swatchClass}`} />
+                  <span className="text-xs font-medium text-gray-300">
+                    {opt.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Personal space: this user's posts */}
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
