@@ -348,17 +348,25 @@ export default function ProfilePage() {
                 Edit profile
               </button>
             ) : (
-              <button
-                onClick={toggleFollow}
-                disabled={followBusy}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-                  isFollowing
-                    ? "border border-white/20 text-white hover:bg-white/10"
-                    : "bg-white text-black hover:opacity-90"
-                }`}
-              >
-                {isFollowing ? "Following" : "Follow"}
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href={`/messages/${profileId}`}
+                  className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                >
+                  Message
+                </Link>
+                <button
+                  onClick={toggleFollow}
+                  disabled={followBusy}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
+                    isFollowing
+                      ? "border border-white/20 text-white hover:bg-white/10"
+                      : "bg-white text-black hover:opacity-90"
+                  }`}
+                >
+                  {isFollowing ? "Following" : "Follow"}
+                </button>
+              </div>
             )}
           </div>
 

@@ -16,6 +16,7 @@ import Logo from "@/components/Logo";
 import { MediaItem } from "@/components/MediaCarousel";
 import PostCard from "@/components/PostCard";
 import AdminBadge from "@/components/AdminBadge";
+import InboxIcon from "@/components/InboxIcon";
 import { useToast } from "@/components/ToastProvider";
 import {
   highlightMatch,
@@ -622,7 +623,10 @@ export default function FeedPage() {
       <div className="relative z-10 flex min-h-screen">
         {/* Sidebar */}
         <aside className="hidden w-60 shrink-0 flex-col border-r border-white/10 p-6 sm:flex">
-          <Logo size="text-2xl" className="mb-8" />
+          <div className="mb-8 flex items-center justify-between">
+            <Logo size="text-2xl" />
+            <InboxIcon />
+          </div>
 
           {/* Profile info */}
           <div className="mb-8 rounded-xl border border-white/10 bg-neutral-900 p-3">
@@ -687,12 +691,15 @@ export default function FeedPage() {
             {/* Mobile-only header (sidebar is hidden below sm) */}
             <div className="mb-6 flex items-center justify-between sm:hidden">
               <Logo size="text-3xl" />
-              <button
-                onClick={handleLogout}
-                className="text-xs font-medium text-gray-500 hover:text-gray-300"
-              >
-                Log out
-              </button>
+              <div className="flex items-center gap-3">
+                <InboxIcon />
+                <button
+                  onClick={handleLogout}
+                  className="text-xs font-medium text-gray-500 hover:text-gray-300"
+                >
+                  Log out
+                </button>
+              </div>
             </div>
 
             {/* All / Following / Hot / For You tabs */}

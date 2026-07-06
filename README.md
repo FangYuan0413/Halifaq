@@ -51,9 +51,14 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 - `supabase/nested_replies.sql` — adds `parent_comment_id` (which top-level reply a nested reply belongs to) and `reply_to_username` (a snapshot of who it's aimed at, e.g. "Reply to @username") to `comments`.
 - `supabase/category_views.sql` — adds a `views` counter to `categories` plus an `increment_category_views` function, bumped once each time someone opens that category's `/category/[slug]` page.
 - `supabase/admin.sql` — adds `profiles.is_admin`, a `warnings` table (a warning an admin sends a user, optionally about a specific post), and updates the posts delete policy so admins can delete anyone's post, not just their own. Also grants admin to `lucasfan0413@gmail.com` (edit the email in the script to change who the admin is).
+- `supabase/messages.sql` — adds the `messages` table (DMs: sender, recipient, optional text, optional photo/video, read flag) with RLS enforcing the 3-message cap for non-followers, a public `message-media` storage bucket, and `profiles.last_seen_activity_at` (the inbox's unread cursor).
 - `components/AdminBadge.tsx` — the small cyan "Admin" pill shown next to an admin's name wherever it appears (sidebar, profile header, post/reply bylines).
+- `components/InboxIcon.tsx` — the envelope button (sidebar + mobile header) linking to `/messages`, with a red badge showing the unread count (unread DMs plus likes/replies since you last checked); polls every 30s so it doesn't go stale while the tab is open.
+- `app/messages/page.tsx` — the inbox: Chats (your DM threads, newest first, unread ones bolded with a red dot), Likes (grouped per post — "X and N others liked your post" — click to open that post), Replies (comments/replies on your posts or your own comments, click to open that post), and Mentions (placeholder — @mentions aren't parsed/tracked anywhere yet). Opening Likes or Replies bumps `profiles.last_seen_activity_at`, which is what the inbox badge counts against.
+- `app/messages/[userId]/page.tsx` — a single DM conversation: message history (text and/or one photo/video per message) in left/right bubbles, marks incoming messages read on open, and lets you send a new one. If you don't follow the other person, you're capped at 3 messages total to them until they follow you back (enforced both in the UI and by the database RLS policy).
+- `utils/notifications.ts` — `getUnreadInboxCount` (DMs + likes + replies since your last-seen cursor) and `markActivitySeen` (bumps that cursor), shared by `InboxIcon` and the inbox page.
 - `components/MediaCarousel.tsx` — renders a post's photo(s)/video; if there's more than one image, shows left/right arrows and a "2/5" counter so viewers can step through them. Clicking a photo opens it fullscreen (same arrow/counter, plus Esc, backdrop click, or the × button to close). While fullscreen, a bottom zoom bar (− button, slider, + button, live percentage) lets viewers dial in a zoom level directly; scroll wheel, double-click, and two-finger pinch (mobile) also zoom, and dragging pans around once zoomed in. Used in the feed, post detail, and profile pages.
-- `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username, school, bio, Following/Followers/Likes-received stats, a Follow/Unfollow button (hidden on your own profile), an "Edit profile" button (own profile only, opens a modal to change username/school/bio — all public), and a list of that user's posts.
+- `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username (with an Admin badge if applicable), school, bio, Following/Followers/Likes-received stats, a "Message" button + Follow/Unfollow button (hidden on your own profile — replaced by "Edit profile", which opens a modal to change username/school/bio — all public), and a list of that user's posts.
 - `app/layout.tsx` — shared page wrapper, dark (`bg-black`) base theme + site title/metadata.
 - `app/icon.png`, `app/apple-icon.png` — the static favicon/site icon (Next.js's file-based convention picks these up automatically, no code needed): the same cyan radar mark from the logo, on a black rounded badge. We tried an animated JS-driven favicon first, but a real browser tab renders favicons at ~16px and can't reliably refresh faster than ~10-30x/second no matter what — pushing for 120fps wasn't realistic, so this is a clean static icon instead.
 - `app/globals.css` — Tailwind setup + the `float-1` through `float-5` keyframe animations used by `BackgroundShapes`.
@@ -62,7 +67,7 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 
 1. `npm install` pulls in `@supabase/supabase-js` and `@supabase/ssr`.
 2. In the Supabase dashboard: **Authentication → Providers → Email**, the "Confirm email" toggle is off for development so signing up logs you in immediately. Turn it back on before real users sign up.
-3. Run once, in order: `supabase/schema.sql`, `supabase/media_setup.sql`, `supabase/add_categories.sql`, `supabase/multi_tags.sql`, `supabase/post_views.sql`, `supabase/social.sql`, `supabase/avatars_setup.sql`, `supabase/profile_fields.sql`, `supabase/post_media.sql`, `supabase/comment_media.sql`, `supabase/nested_replies.sql`, `supabase/category_views.sql`, `supabase/admin.sql`.
+3. Run once, in order: `supabase/schema.sql`, `supabase/media_setup.sql`, `supabase/add_categories.sql`, `supabase/multi_tags.sql`, `supabase/post_views.sql`, `supabase/social.sql`, `supabase/avatars_setup.sql`, `supabase/profile_fields.sql`, `supabase/post_media.sql`, `supabase/comment_media.sql`, `supabase/nested_replies.sql`, `supabase/category_views.sql`, `supabase/admin.sql`, `supabase/messages.sql`.
 
 ## Features so far
 
@@ -75,6 +80,15 @@ Both run entirely client-side in `utils/postDisplay.tsx`, over the posts already
 - **Hot tab** — `hotScore(post) = (views×1 + likes×5 + comments×4) / (ageInHours + 2)^1.3`. Likes and comments count for more than raw views since they're stronger signals of real engagement, and dividing by an age-based "gravity" term (same shape as the classic Hacker News ranking formula) means a fresh post with modest engagement can outrank an old post that racked up views long ago — engagement has to keep up with a post's age to stay on top.
 - **For You tab** — builds a lightweight taste profile from the posts you've liked: which category tags keep showing up (`tagWeights`), and which non-generic words (>3 letters, common stopwords like "with"/"about" excluded) keep showing up in their titles/bodies (`keywordWeights`). Every other post is then scored by `forYouScore = Σ(tag match × 3) + Σ(keyword match × 1)` — tag matches count for more since they're an explicit signal, keyword matches add a lighter-touch nudge toward similar topics. Posts are sorted by that score, falling back to the Hot score as a tie-breaker (and as the entire ranking for someone who hasn't liked anything yet, since their profile is empty).
 - **`/search` results** — `keywordRelevanceScore(post, query) = (title has exact phrase? +10) + (body has exact phrase? +4) + Σ(title has word? +3) + Σ(body has word? +1)`, computed per post against the searched query. Posts scoring 0 (no overlap at all) are dropped entirely rather than shown as weak matches; the rest are sorted by that score, then views, then likes.
+
+## Messaging & notifications
+
+An envelope icon (sidebar + mobile header) opens `/messages`, with a red badge for anything unread:
+
+- **Chats** — direct messages between two users, with photo/video attachments. Anyone can message someone they follow; if the other person doesn't follow you back, you're limited to 3 messages total to them (both a UI warning and a hard database rule) so strangers can say hello without being able to spam.
+- **Likes** — grouped per post ("Alex and 13 others liked your post"), click through to the post.
+- **Replies** — comments/replies on your posts (or replies to your own comments), click through to the post.
+- **Mentions** — placeholder tab; @mentions aren't parsed or tracked anywhere in the app yet.
 
 ## Moderation
 
