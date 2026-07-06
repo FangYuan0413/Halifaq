@@ -6,8 +6,9 @@ import { useToast } from "./ToastProvider";
 // A one-off, Miku-theme-only reskin of the "Daily Life" category link: the
 // wave/beach button art shown at its own native proportions (no forced
 // CSS shape — the image already has real transparent corners), with a
-// small chibi Miku badge standing near the top-right corner (a higher
-// z-index than the button, not clipped by it), and a toast on click.
+// small chibi Miku badge whose feet land exactly on the top-right corner
+// (a higher z-index than the button, not clipped by it), and a toast on
+// click.
 export default function DailyLifeMikuButton({
   className = "",
 }: {
@@ -33,7 +34,7 @@ export default function DailyLifeMikuButton({
       <img
         src="/miku-coconut.png"
         alt=""
-        style={{ height: "75%", top: "-60%", right: "4%" }}
+        style={{ height: "68%", top: "-60%", right: "4%" }}
         className="pointer-events-none absolute z-20 w-auto max-w-none object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] transition group-hover:-translate-y-1"
       />
     </Link>
