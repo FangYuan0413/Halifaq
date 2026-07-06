@@ -16,6 +16,8 @@ type Comment = {
   created_at: string;
   author_id: string;
   media: MediaItem[];
+  parent_comment_id: string | null;
+  reply_to_username: string | null;
   profiles: { username: string; avatar_url: string | null } | null;
 };
 
@@ -66,6 +68,24 @@ export default function PostDetailPage() {
   const [replyMediaPreviews, setReplyMediaPreviews] = useState<string[]>([]);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Replying to a specific comment/reply (nests under that comment's
+  // top-level thread, tagged "Reply to @username"). Only one nested reply
+  // box is open at a time.
+  const [replyingTo, setReplyingTo] = useState<{
+    parentId: string;
+    toUsername: string;
+  } | null>(null);
+  const [nestedReplyText, setNestedReplyText] = useState("");
+  const [nestedPosting, setNestedPosting] = useState(false);
+  const [nestedError, setNestedError] = useState<string | null>(null);
+  const [nestedMediaFiles, setNestedMediaFiles] = useState<File[]>([]);
+  const [nestedMediaPreviews, setNestedMediaPreviews] = useState<string[]>([]);
+  const nestedFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Threads with more than 2 replies start collapsed; ids in this set are
+  // expanded to show every reply.
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
+
   async function loadPost() {
     const { data, error } = await supabase
       .from("posts")
@@ -100,7 +120,7 @@ export default function PostDetailPage() {
     const { data, error } = await supabase
       .from("comments")
       .select(
-        "id, body, created_at, author_id, profiles(username, avatar_url), comment_media(url, position)"
+        "id, body, created_at, author_id, parent_comment_id, reply_to_username, profiles(username, avatar_url), comment_media(url, position)"
       )
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
@@ -156,6 +176,135 @@ export default function PostDetailPage() {
     setReplyMediaFiles([]);
     setReplyMediaPreviews([]);
     if (replyFileInputRef.current) replyFileInputRef.current.value = "";
+  }
+
+  function clearNestedMedia() {
+    nestedMediaPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setNestedMediaFiles([]);
+    setNestedMediaPreviews([]);
+    if (nestedFileInputRef.current) nestedFileInputRef.current.value = "";
+  }
+
+  function openReplyTo(parentId: string, toUsername: string) {
+    setReplyingTo({ parentId, toUsername });
+    setNestedReplyText("");
+    setNestedError(null);
+    clearNestedMedia();
+  }
+
+  function cancelNestedReply() {
+    setReplyingTo(null);
+    setNestedReplyText("");
+    setNestedError(null);
+    clearNestedMedia();
+  }
+
+  function toggleExpandThread(id: string) {
+    setExpandedThreads((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handleNestedFileSelect(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    const room = MAX_REPLY_IMAGES - nestedMediaFiles.length;
+    const oversized = files.some((f) => f.size > 20 * 1024 * 1024);
+    const usable = files.filter((f) => f.size <= 20 * 1024 * 1024).slice(0, room);
+
+    if (files.length > room || oversized) {
+      showToast(
+        `Only added what fit — up to ${MAX_REPLY_IMAGES} photos, each under 20MB.`,
+        "error"
+      );
+    }
+
+    if (usable.length === 0) return;
+
+    setNestedMediaFiles((prev) => [...prev, ...usable]);
+    setNestedMediaPreviews((prev) => [
+      ...prev,
+      ...usable.map((f) => URL.createObjectURL(f)),
+    ]);
+  }
+
+  function removeNestedMediaAt(index: number) {
+    URL.revokeObjectURL(nestedMediaPreviews[index]);
+    setNestedMediaFiles((prev) => prev.filter((_, i) => i !== index));
+    setNestedMediaPreviews((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleNestedReplySubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!nestedReplyText.trim() || !userId || !replyingTo) return;
+
+    const { parentId, toUsername } = replyingTo;
+
+    setNestedPosting(true);
+    setNestedError(null);
+
+    const { data: newComment, error } = await supabase
+      .from("comments")
+      .insert({
+        post_id: postId,
+        author_id: userId,
+        body: nestedReplyText,
+        parent_comment_id: parentId,
+        reply_to_username: toUsername,
+      })
+      .select("id")
+      .single();
+
+    if (error || !newComment) {
+      setNestedPosting(false);
+      const message = error?.message ?? "Something went wrong — please try again.";
+      setNestedError(message);
+      showToast(`Reply failed — ${message}`, "error");
+      return;
+    }
+
+    if (nestedMediaFiles.length > 0) {
+      const mediaRows: { comment_id: string; url: string; position: number }[] = [];
+
+      for (let i = 0; i < nestedMediaFiles.length; i++) {
+        const file = nestedMediaFiles[i];
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `${userId}/comments/${Date.now()}-${i}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("post-media")
+          .upload(path, file);
+
+        if (uploadError) {
+          setNestedPosting(false);
+          setNestedError(uploadError.message);
+          showToast(`Upload failed — ${uploadError.message}`, "error");
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("post-media")
+          .getPublicUrl(path);
+
+        mediaRows.push({
+          comment_id: newComment.id,
+          url: urlData.publicUrl,
+          position: i,
+        });
+      }
+
+      await supabase.from("comment_media").insert(mediaRows);
+    }
+
+    setNestedPosting(false);
+    cancelNestedReply();
+    setExpandedThreads((prev) => new Set(prev).add(parentId));
+    showToast("Reply posted!");
+    await loadComments();
   }
 
   useEffect(() => {
@@ -307,6 +456,16 @@ export default function PostDetailPage() {
       </main>
     );
   }
+
+  const topLevelComments = comments.filter((c) => !c.parent_comment_id);
+  const repliesByParent = new Map<string, Comment[]>();
+  comments.forEach((c) => {
+    if (c.parent_comment_id) {
+      const arr = repliesByParent.get(c.parent_comment_id) ?? [];
+      arr.push(c);
+      repliesByParent.set(c.parent_comment_id, arr);
+    }
+  });
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-black px-4 py-8">
@@ -461,37 +620,206 @@ export default function PostDetailPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
             {comments.length} {comments.length === 1 ? "reply" : "replies"}
           </p>
-          {comments.map((c) => (
-            <div
-              key={c.id}
-              className="rounded-2xl border border-white/10 bg-neutral-900 p-4"
-            >
-              <div className="mb-1 flex items-center gap-2 text-xs text-gray-500">
-                <Link
-                  href={`/profile/${c.author_id}`}
-                  className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white hover:underline"
+          {topLevelComments.map((c) => {
+            const replies = repliesByParent.get(c.id) ?? [];
+            const expanded = expandedThreads.has(c.id);
+            const visibleReplies = expanded ? replies : replies.slice(0, 2);
+            const hiddenCount = replies.length - visibleReplies.length;
+
+            return (
+              <div
+                key={c.id}
+                className="rounded-2xl border border-white/10 bg-neutral-900 p-4"
+              >
+                <div className="mb-1 flex items-center gap-2 text-xs text-gray-500">
+                  <Link
+                    href={`/profile/${c.author_id}`}
+                    className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white hover:underline"
+                  >
+                    {c.profiles?.avatar_url ? (
+                      <img
+                        src={c.profiles.avatar_url}
+                        alt=""
+                        className="h-5 w-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
+                        {(c.profiles?.username ?? "?").slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                    {c.profiles?.username ?? "Someone"}
+                  </Link>
+                  <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-gray-200">
+                  {c.body}
+                </p>
+                <MediaCarousel media={c.media} />
+                <button
+                  type="button"
+                  onClick={() =>
+                    openReplyTo(c.id, c.profiles?.username ?? "Someone")
+                  }
+                  className="mt-2 text-xs font-medium text-gray-500 hover:text-white"
                 >
-                  {c.profiles?.avatar_url ? (
-                    <img
-                      src={c.profiles.avatar_url}
-                      alt=""
-                      className="h-5 w-5 rounded-full object-cover"
+                  Reply
+                </button>
+
+                {/* Nested replies for this thread */}
+                {replies.length > 0 && (
+                  <div className="mt-3 ml-4 space-y-2 border-l border-white/10 pl-3">
+                    {visibleReplies.map((r) => (
+                      <div key={r.id} className="rounded-xl bg-black/30 p-3">
+                        <div className="mb-1 flex items-center gap-2 text-xs text-gray-500">
+                          <Link
+                            href={`/profile/${r.author_id}`}
+                            className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white hover:underline"
+                          >
+                            {r.profiles?.avatar_url ? (
+                              <img
+                                src={r.profiles.avatar_url}
+                                alt=""
+                                className="h-5 w-5 rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
+                                {(r.profiles?.username ?? "?")
+                                  .slice(0, 1)
+                                  .toUpperCase()}
+                              </span>
+                            )}
+                            {r.profiles?.username ?? "Someone"}
+                          </Link>
+                          <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                        </div>
+                        {r.reply_to_username && (
+                          <p className="text-xs font-medium text-cyan-400">
+                            Reply to @{r.reply_to_username}
+                          </p>
+                        )}
+                        <p className="whitespace-pre-wrap text-sm text-gray-200">
+                          {r.body}
+                        </p>
+                        <MediaCarousel media={r.media} />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openReplyTo(c.id, r.profiles?.username ?? "Someone")
+                          }
+                          className="mt-1 text-xs font-medium text-gray-500 hover:text-white"
+                        >
+                          Reply
+                        </button>
+                      </div>
+                    ))}
+
+                    {hiddenCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandThread(c.id)}
+                        className="text-xs font-medium text-gray-500 hover:text-white"
+                      >
+                        View {hiddenCount} more {hiddenCount === 1 ? "reply" : "replies"}
+                      </button>
+                    )}
+                    {expanded && replies.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandThread(c.id)}
+                        className="text-xs font-medium text-gray-500 hover:text-white"
+                      >
+                        Collapse replies
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Inline nested-reply compose box */}
+                {replyingTo?.parentId === c.id && (
+                  <form
+                    onSubmit={handleNestedReplySubmit}
+                    className="mt-3 ml-4 rounded-xl border border-white/10 bg-black/30 p-3"
+                  >
+                    <p className="mb-1.5 text-xs font-medium text-cyan-400">
+                      Reply to @{replyingTo.toUsername}
+                    </p>
+                    <textarea
+                      value={nestedReplyText}
+                      onChange={(e) => setNestedReplyText(e.target.value)}
+                      placeholder="Write a reply…"
+                      rows={2}
+                      autoFocus
+                      className="w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40"
                     />
-                  ) : (
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
-                      {(c.profiles?.username ?? "?").slice(0, 1).toUpperCase()}
-                    </span>
-                  )}
-                  {c.profiles?.username ?? "Someone"}
-                </Link>
-                <span>{new Date(c.created_at).toLocaleDateString()}</span>
+
+                    {nestedMediaPreviews.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {nestedMediaPreviews.map((preview, i) => (
+                          <div
+                            key={preview}
+                            className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10"
+                          >
+                            <img
+                              src={preview}
+                              alt="Selected upload preview"
+                              className="h-full w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeNestedMediaAt(i)}
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black text-xs text-white ring-1 ring-white/20"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={nestedFileInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleNestedFileSelect}
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => nestedFileInputRef.current?.click()}
+                          disabled={nestedMediaFiles.length >= MAX_REPLY_IMAGES}
+                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
+                        >
+                          {nestedMediaFiles.length > 0
+                            ? `+ Photo (${nestedMediaFiles.length}/${MAX_REPLY_IMAGES})`
+                            : "+ Photo"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelNestedReply}
+                          className="text-xs font-medium text-gray-500 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={nestedPosting || !nestedReplyText.trim()}
+                        className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
+                      >
+                        {nestedPosting ? "Replying…" : "Reply"}
+                      </button>
+                    </div>
+                    {nestedError && (
+                      <p className="mt-2 text-xs text-red-400">{nestedError}</p>
+                    )}
+                  </form>
+                )}
               </div>
-              <p className="whitespace-pre-wrap text-sm text-gray-200">
-                {c.body}
-              </p>
-              <MediaCarousel media={c.media} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </main>
