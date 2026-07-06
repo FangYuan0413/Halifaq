@@ -20,6 +20,7 @@ import InboxIcon from "@/components/InboxIcon";
 import MikuChibi from "@/components/MikuChibi";
 import DailyLifeMikuButton from "@/components/DailyLifeMikuButton";
 import EducationMikuButton from "@/components/EducationMikuButton";
+import EventsMikuButton from "@/components/EventsMikuButton";
 import { useTheme } from "@/utils/useTheme";
 import { useToast } from "@/components/ToastProvider";
 import {
@@ -683,6 +684,8 @@ export default function FeedPage() {
                 <DailyLifeMikuButton key={c.id} className="my-2 h-10 self-start" />
               ) : theme === "miku" && c.slug === "education" ? (
                 <EducationMikuButton key={c.id} className="my-2 h-10 self-start" />
+              ) : theme === "miku" && c.slug === "events" ? (
+                <EventsMikuButton key={c.id} className="my-2 h-10 self-start" />
               ) : (
                 <Link
                   key={c.id}
@@ -1018,6 +1021,8 @@ export default function FeedPage() {
                   <DailyLifeMikuButton key={c.id} className="h-8" />
                 ) : theme === "miku" && c.slug === "education" ? (
                   <EducationMikuButton key={c.id} className="h-8" />
+                ) : theme === "miku" && c.slug === "events" ? (
+                  <EventsMikuButton key={c.id} className="h-8" />
                 ) : (
                   <Link
                     key={c.id}

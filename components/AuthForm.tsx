@@ -19,7 +19,33 @@ export default function AuthForm({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const router = useRouter();
+
+  // "Invalid login credentials" covers both a wrong password AND an
+  // unconfirmed email, so we can't tell which from the message alone —
+  // offer a resend link any time login fails rather than guessing.
+  async function handleResendConfirmation() {
+    if (!email) return;
+    setResending(true);
+    setError(null);
+    setInfo(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+    });
+
+    setResending(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      setInfo(
+        "Confirmation email resent — check your inbox (and spam folder)."
+      );
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -143,9 +169,23 @@ export default function AuthForm({
         </div>
 
         {error && (
-          <p className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-            {error}
-          </p>
+          <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            <p>{error}</p>
+            {mode === "login" && (
+              <p className="mt-1 text-xs text-red-300/80">
+                Wrong password, or an unconfirmed email can show this same
+                message.{" "}
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resending || !email}
+                  className="font-medium underline underline-offset-2 hover:text-red-200 disabled:opacity-50"
+                >
+                  {resending ? "Sending…" : "Resend confirmation email"}
+                </button>
+              </p>
+            )}
+          </div>
         )}
         {info && (
           <p className="mb-4 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-gray-200">
