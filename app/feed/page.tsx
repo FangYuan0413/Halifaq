@@ -7,65 +7,27 @@ import {
   FormEvent,
   ChangeEvent,
   MouseEvent,
-  ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import Logo from "@/components/Logo";
-import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
+import { MediaItem } from "@/components/MediaCarousel";
+import PostCard from "@/components/PostCard";
 import { useToast } from "@/components/ToastProvider";
+import {
+  highlightMatch,
+  hotScore,
+  buildPreferenceProfile,
+  forYouScore,
+} from "@/utils/postDisplay";
 
 const MAX_IMAGES = 9;
 
 type Category = { id: number; name: string; slug: string };
 type Tag = { id: number; name: string };
 type UserResult = { id: string; username: string };
-
-// Wraps every case-insensitive occurrence of `query` in `text` with a
-// highlighted <mark>, so it's obvious why a post matched a search.
-function highlightMatch(text: string, query: string) {
-  if (!query) return text;
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  if (!lowerText.includes(lowerQuery)) return text;
-
-  const parts: ReactNode[] = [];
-  let start = 0;
-  let idx = lowerText.indexOf(lowerQuery, start);
-
-  while (idx !== -1) {
-    if (idx > start) parts.push(text.slice(start, idx));
-    parts.push(
-      <mark key={idx} className="rounded bg-yellow-400/30 text-yellow-200">
-        {text.slice(idx, idx + lowerQuery.length)}
-      </mark>
-    );
-    start = idx + lowerQuery.length;
-    idx = lowerText.indexOf(lowerQuery, start);
-  }
-  if (start < text.length) parts.push(text.slice(start));
-
-  return parts;
-}
-
-// Turns a timestamp into "just now" / "5m ago" / "3h ago" / "2d ago", falling
-// back to a plain date once it's more than a week old.
-function formatRelativeTime(dateString: string) {
-  const date = new Date(dateString);
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
-}
 
 type Post = {
   id: string;
@@ -89,9 +51,7 @@ type RawPost = Omit<Post, "tags" | "likedBy" | "commentCount" | "media"> & {
   post_media: { url: string; media_type: string; position: number }[] | null;
 };
 
-// A post counts as "trending" once it's picked up enough real engagement.
-const TRENDING_VIEWS = 50;
-const TRENDING_LIKES = 5;
+type FeedTab = "all" | "following" | "hot" | "forYou";
 
 export default function FeedPage() {
   const router = useRouter();
@@ -105,7 +65,7 @@ export default function FeedPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [followingIds, setFollowingIds] = useState<string[]>([]);
-  const [feedTab, setFeedTab] = useState<"all" | "following">("all");
+  const [feedTab, setFeedTab] = useState<FeedTab>("all");
   const [filterCategoryIds, setFilterCategoryIds] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -431,12 +391,6 @@ export default function FeedPage() {
     }
   }
 
-  function goToProfile(e: MouseEvent, profileId: string) {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/profile/${profileId}`);
-  }
-
   async function handleDelete(e: MouseEvent, postId: string) {
     e.preventDefault();
     e.stopPropagation();
@@ -467,10 +421,7 @@ export default function FeedPage() {
   }
 
   const query = searchQuery.trim().toLowerCase();
-  const visiblePosts = posts
-    .filter(
-      (p) => feedTab === "all" || followingIds.includes(p.author_id)
-    )
+  const baseFiltered = posts
     .filter(
       (p) =>
         filterCategoryIds.length === 0 ||
@@ -482,6 +433,32 @@ export default function FeedPage() {
         p.title.toLowerCase().includes(query) ||
         p.body.toLowerCase().includes(query)
     );
+
+  let visiblePosts: Post[];
+  if (feedTab === "following") {
+    visiblePosts = baseFiltered.filter((p) =>
+      followingIds.includes(p.author_id)
+    );
+  } else if (feedTab === "hot") {
+    // Views + likes + comments, decayed by age (classic "hot" ranking) so
+    // fresh popular posts rise without old ones dominating forever.
+    visiblePosts = [...baseFiltered].sort(
+      (a, b) => hotScore(b) - hotScore(a)
+    );
+  } else if (feedTab === "forYou") {
+    // Build a lightweight taste profile from tags/keywords of posts this
+    // user has liked, then rank everything by how well it matches — with
+    // "hot" as the tie-breaker (and as the fallback ranking entirely, for
+    // someone who hasn't liked anything yet).
+    const likedPosts = posts.filter((p) => p.likedBy.includes(userId ?? ""));
+    const profile = buildPreferenceProfile(likedPosts);
+    visiblePosts = [...baseFiltered].sort((a, b) => {
+      const diff = forYouScore(b, profile) - forYouScore(a, profile);
+      return diff !== 0 ? diff : hotScore(b) - hotScore(a);
+    });
+  } else {
+    visiblePosts = baseFiltered;
+  }
 
   // Small preview list for the search dropdown (ignores the category filter,
   // so it always reflects the raw keyword match).
@@ -576,17 +553,13 @@ export default function FeedPage() {
               All
             </button>
             {categories.map((c) => (
-              <button
+              <Link
                 key={c.id}
-                onClick={() => toggleFilterCategory(c.id)}
-                className={`rounded-lg px-3 py-2 text-left text-sm transition ${
-                  filterCategoryIds.includes(c.id)
-                    ? "bg-white text-black"
-                    : "text-gray-400 hover:bg-white/5"
-                }`}
+                href={`/category/${c.slug}`}
+                className="rounded-lg px-3 py-2 text-left text-sm text-gray-400 transition hover:bg-white/5"
               >
                 {c.name}
-              </button>
+              </Link>
             ))}
           </nav>
         </aside>
@@ -605,28 +578,28 @@ export default function FeedPage() {
               </button>
             </div>
 
-            {/* All / Following tabs */}
-            <div className="mb-4 flex gap-2">
-              <button
-                onClick={() => setFeedTab("all")}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                  feedTab === "all"
-                    ? "bg-white text-black"
-                    : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFeedTab("following")}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                  feedTab === "following"
-                    ? "bg-white text-black"
-                    : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10"
-                }`}
-              >
-                Following
-              </button>
+            {/* All / Following / Hot / For You tabs */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              {(
+                [
+                  ["all", "All"],
+                  ["following", "Following"],
+                  ["hot", "Hot"],
+                  ["forYou", "For You"],
+                ] as [FeedTab, string][]
+              ).map(([tab, label]) => (
+                <button
+                  key={tab}
+                  onClick={() => setFeedTab(tab)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                    feedTab === tab
+                      ? "bg-white text-black"
+                      : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* Search bar — focusing it opens a trending-searches dropdown */}
@@ -765,17 +738,13 @@ export default function FeedPage() {
                 All
               </button>
               {categories.map((c) => (
-                <button
+                <Link
                   key={c.id}
-                  onClick={() => toggleFilterCategory(c.id)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                    filterCategoryIds.includes(c.id)
-                      ? "bg-white text-black"
-                      : "border border-white/10 bg-white/5 text-gray-400"
-                  }`}
+                  href={`/category/${c.slug}`}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-400"
                 >
                   {c.name}
-                </button>
+                </Link>
               ))}
             </div>
 
@@ -786,103 +755,22 @@ export default function FeedPage() {
                   ? "No posts match your search."
                   : feedTab === "following"
                     ? "No posts yet from people you follow."
-                    : "No posts yet — be the first to ask something!"}
+                    : feedTab === "forYou"
+                      ? "Like a few posts and we'll start tailoring this tab to you."
+                      : "No posts yet — be the first to ask something!"}
               </p>
             ) : (
               <div className="columns-1 gap-4 sm:columns-2">
-                {visiblePosts.map((post) => {
-                  const liked = post.likedBy.includes(userId ?? "");
-                  const trending =
-                    post.views >= TRENDING_VIEWS ||
-                    post.likedBy.length >= TRENDING_LIKES;
-
-                  return (
-                    <Link
-                      key={post.id}
-                      href={`/post/${post.id}`}
-                      className="mb-4 block break-inside-avoid rounded-2xl border border-white/10 bg-neutral-900 p-4 shadow-[0_0_30px_rgba(255,255,255,0.04)] transition hover:border-white/25"
-                    >
-                      <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                        <button
-                          onClick={(e) => goToProfile(e, post.author_id)}
-                          className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white hover:underline"
-                        >
-                          {post.profiles?.avatar_url ? (
-                            <img
-                              src={post.profiles.avatar_url}
-                              alt=""
-                              className="h-5 w-5 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
-                              {(post.profiles?.username ?? "?")
-                                .slice(0, 1)
-                                .toUpperCase()}
-                            </span>
-                          )}
-                          {post.profiles?.username ?? "Someone"}
-                        </button>
-                        {trending && (
-                          <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]">
-                            Trending
-                          </span>
-                        )}
-                        {post.tags.map((t) => (
-                          <span
-                            key={t.id}
-                            className="rounded-full bg-white/10 px-2 py-0.5 text-gray-300"
-                          >
-                            {t.name}
-                          </span>
-                        ))}
-                        <span>{formatRelativeTime(post.created_at)}</span>
-                        {post.author_id === userId && (
-                          <button
-                            onClick={(e) => handleDelete(e, post.id)}
-                            className="ml-auto text-gray-600 hover:text-red-400"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-sm font-semibold text-white">
-                        {highlightMatch(post.title, query)}
-                      </p>
-                      {post.body && (
-                        <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-200">
-                          {highlightMatch(post.body, query)}
-                        </p>
-                      )}
-                      <MediaCarousel media={post.media} />
-                      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                        <button
-                          onClick={(e) => toggleLike(e, post.id, liked)}
-                          className={`flex items-center gap-1 font-medium transition ${
-                            liked
-                              ? "text-red-400"
-                              : "text-gray-500 hover:text-gray-300"
-                          }`}
-                        >
-                          <span
-                            className={
-                              liked
-                                ? "drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]"
-                                : ""
-                            }
-                          >
-                            ♥
-                          </span>
-                          {post.likedBy.length}
-                        </button>
-                        <span>
-                          {post.commentCount}{" "}
-                          {post.commentCount === 1 ? "reply" : "replies"}
-                        </span>
-                        <span>{post.views} views</span>
-                      </div>
-                    </Link>
-                  );
-                })}
+                {visiblePosts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    userId={userId}
+                    query={query}
+                    onToggleLike={toggleLike}
+                    onDelete={handleDelete}
+                  />
+                ))}
               </div>
             )}
           </div>
