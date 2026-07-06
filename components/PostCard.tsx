@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MediaCarousel, { MediaItem } from "./MediaCarousel";
 import AdminBadge from "./AdminBadge";
+import MikuChibi from "./MikuChibi";
+import { useTheme } from "@/utils/useTheme";
 import {
   formatRelativeTime,
   highlightMatch,
@@ -57,6 +59,7 @@ export default function PostCard({
   ) => void | Promise<void>;
 }) {
   const router = useRouter();
+  const theme = useTheme();
   const liked = post.likedBy.includes(userId ?? "");
   const trending =
     post.views >= TRENDING_VIEWS || post.likedBy.length >= TRENDING_LIKES;
@@ -172,13 +175,17 @@ export default function PostCard({
               liked ? "text-red-400" : "text-gray-500 hover:text-gray-300"
             }`}
           >
-            <span
-              className={
-                liked ? "drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]" : ""
-              }
-            >
-              ♥
-            </span>
+            {theme === "miku" && liked ? (
+              <MikuChibi className="h-4 w-4" />
+            ) : (
+              <span
+                className={
+                  liked ? "drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]" : ""
+                }
+              >
+                ♥
+              </span>
+            )}
             {post.likedBy.length}
           </button>
           <span>

@@ -8,6 +8,8 @@ import BackgroundShapes from "@/components/BackgroundShapes";
 import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
 import AdminBadge from "@/components/AdminBadge";
+import MikuChibi from "@/components/MikuChibi";
+import { useTheme } from "@/utils/useTheme";
 
 const MAX_REPLY_IMAGES = 3;
 
@@ -54,6 +56,7 @@ export default function PostDetailPage() {
   const postId = params.id as string;
   const supabase = createClient();
   const { showToast } = useToast();
+  const theme = useTheme();
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -581,15 +584,19 @@ export default function PostDetailPage() {
                   : "text-gray-500 hover:text-gray-300"
               }`}
             >
-              <span
-                className={
-                  post.likedBy.includes(userId ?? "")
-                    ? "drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]"
-                    : ""
-                }
-              >
-                ♥
-              </span>
+              {theme === "miku" && post.likedBy.includes(userId ?? "") ? (
+                <MikuChibi className="h-4 w-4" />
+              ) : (
+                <span
+                  className={
+                    post.likedBy.includes(userId ?? "")
+                      ? "drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]"
+                      : ""
+                  }
+                >
+                  ♥
+                </span>
+              )}
               {post.likedBy.length}
             </button>
           </div>
