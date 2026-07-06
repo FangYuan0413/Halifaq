@@ -4,6 +4,7 @@ import { MouseEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MediaCarousel, { MediaItem } from "./MediaCarousel";
+import AdminBadge from "./AdminBadge";
 import {
   formatRelativeTime,
   highlightMatch,
@@ -22,7 +23,11 @@ export type PostCardData = {
   media: MediaItem[];
   views: number;
   commentCount: number;
-  profiles: { username: string; avatar_url: string | null } | null;
+  profiles: {
+    username: string;
+    avatar_url: string | null;
+    is_admin?: boolean;
+  } | null;
   tags: Tag[];
   likedBy: string[];
 };
@@ -115,6 +120,7 @@ export default function PostCard({
             )}
             {post.profiles?.username ?? "Someone"}
           </button>
+          {post.profiles?.is_admin && <AdminBadge />}
           {trending && (
             <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]">
               Trending

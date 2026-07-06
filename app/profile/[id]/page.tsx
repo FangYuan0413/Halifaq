@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
+import AdminBadge from "@/components/AdminBadge";
 
 type Tag = { id: number; name: string };
 
@@ -16,6 +17,7 @@ type ProfileInfo = {
   bio: string | null;
   school: string | null;
   avatar_url: string | null;
+  is_admin: boolean;
 };
 
 type Post = {
@@ -83,7 +85,7 @@ export default function ProfilePage() {
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, bio, school, avatar_url")
+        .select("id, username, bio, school, avatar_url, is_admin")
         .eq("id", profileId)
         .single();
 
@@ -323,8 +325,9 @@ export default function ProfilePage() {
               />
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-lg font-semibold text-white">
+              <p className="flex items-center gap-1.5 truncate text-lg font-semibold text-white">
                 {profile.username}
+                {profile.is_admin && <AdminBadge />}
               </p>
               {profile.school && (
                 <p className="mt-0.5 truncate text-sm text-gray-300">

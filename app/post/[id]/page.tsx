@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
+import AdminBadge from "@/components/AdminBadge";
 
 const MAX_REPLY_IMAGES = 3;
 
@@ -18,7 +19,7 @@ type Comment = {
   media: MediaItem[];
   parent_comment_id: string | null;
   reply_to_username: string | null;
-  profiles: { username: string; avatar_url: string | null } | null;
+  profiles: { username: string; avatar_url: string | null; is_admin?: boolean } | null;
 };
 
 // Shape Supabase returns for the nested join
@@ -35,7 +36,7 @@ type PostDetail = {
   created_at: string;
   author_id: string;
   media: MediaItem[];
-  profiles: { username: string; avatar_url: string | null } | null;
+  profiles: { username: string; avatar_url: string | null; is_admin?: boolean } | null;
   tags: Tag[];
   likedBy: string[];
 };
@@ -96,7 +97,7 @@ export default function PostDetailPage() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id), post_media(url, media_type, position)"
+        "id, title, body, created_at, author_id, profiles!posts_author_id_fkey(username, avatar_url, is_admin), post_categories(categories(id, name)), post_likes(user_id), post_media(url, media_type, position)"
       )
       .eq("id", postId)
       .single();
@@ -126,7 +127,7 @@ export default function PostDetailPage() {
     const { data, error } = await supabase
       .from("comments")
       .select(
-        "id, body, created_at, author_id, parent_comment_id, reply_to_username, profiles(username, avatar_url), comment_media(url, position)"
+        "id, body, created_at, author_id, parent_comment_id, reply_to_username, profiles(username, avatar_url, is_admin), comment_media(url, position)"
       )
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
@@ -538,6 +539,7 @@ export default function PostDetailPage() {
                 )}
                 {post.profiles?.username ?? "Someone"}
               </Link>
+              {post.profiles?.is_admin && <AdminBadge />}
               {post.tags.map((t) => (
                 <span
                   key={t.id}
@@ -696,6 +698,7 @@ export default function PostDetailPage() {
                     )}
                     {c.profiles?.username ?? "Someone"}
                   </Link>
+                  {c.profiles?.is_admin && <AdminBadge />}
                   <span>{new Date(c.created_at).toLocaleDateString()}</span>
                 </div>
                 <p className="whitespace-pre-wrap text-sm text-gray-200">
@@ -737,6 +740,7 @@ export default function PostDetailPage() {
                             )}
                             {r.profiles?.username ?? "Someone"}
                           </Link>
+                          {r.profiles?.is_admin && <AdminBadge />}
                           <span>{new Date(r.created_at).toLocaleDateString()}</span>
                         </div>
                         {r.reply_to_username && (

@@ -21,7 +21,7 @@ type Post = {
   media: MediaItem[];
   views: number;
   commentCount: number;
-  profiles: { username: string; avatar_url: string | null } | null;
+  profiles: { username: string; avatar_url: string | null; is_admin?: boolean } | null;
   tags: Tag[];
   likedBy: string[];
 };
@@ -69,7 +69,7 @@ export default function CategoryPage() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, views, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id), comments(count), post_media(url, media_type, position)"
+        "id, title, body, created_at, author_id, views, profiles!posts_author_id_fkey(username, avatar_url, is_admin), post_categories(categories(id, name)), post_likes(user_id), comments(count), post_media(url, media_type, position)"
       )
       .in("id", postIds)
       .order("created_at", { ascending: false });

@@ -51,6 +51,7 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 - `supabase/nested_replies.sql` — adds `parent_comment_id` (which top-level reply a nested reply belongs to) and `reply_to_username` (a snapshot of who it's aimed at, e.g. "Reply to @username") to `comments`.
 - `supabase/category_views.sql` — adds a `views` counter to `categories` plus an `increment_category_views` function, bumped once each time someone opens that category's `/category/[slug]` page.
 - `supabase/admin.sql` — adds `profiles.is_admin`, a `warnings` table (a warning an admin sends a user, optionally about a specific post), and updates the posts delete policy so admins can delete anyone's post, not just their own. Also grants admin to `lucasfan0413@gmail.com` (edit the email in the script to change who the admin is).
+- `components/AdminBadge.tsx` — the small cyan "Admin" pill shown next to an admin's name wherever it appears (sidebar, profile header, post/reply bylines).
 - `components/MediaCarousel.tsx` — renders a post's photo(s)/video; if there's more than one image, shows left/right arrows and a "2/5" counter so viewers can step through them. Clicking a photo opens it fullscreen (same arrow/counter, plus Esc, backdrop click, or the × button to close). While fullscreen, a bottom zoom bar (− button, slider, + button, live percentage) lets viewers dial in a zoom level directly; scroll wheel, double-click, and two-finger pinch (mobile) also zoom, and dragging pans around once zoomed in. Used in the feed, post detail, and profile pages.
 - `app/profile/[id]/page.tsx` — profile / "personal space" page: avatar (click your own to upload a picture), username, school, bio, Following/Followers/Likes-received stats, a Follow/Unfollow button (hidden on your own profile), an "Edit profile" button (own profile only, opens a modal to change username/school/bio — all public), and a list of that user's posts.
 - `app/layout.tsx` — shared page wrapper, dark (`bg-black`) base theme + site title/metadata.
@@ -78,6 +79,8 @@ Both run entirely client-side in `utils/postDisplay.tsx`, over the posts already
 ## Moderation
 
 `profiles.is_admin` marks an account as an admin (granted via `supabase/admin.sql`, currently `lucasfan0413@gmail.com`). Admins get two extra powers, both surfaced directly on `PostCard` and the post detail page:
+
+An admin's name also carries a small cyan **Admin** badge (`components/AdminBadge.tsx`) everywhere it appears — the sidebar, their own profile header, and next to their name on any post or reply — so it's clear at a glance who has moderation authority.
 
 - **Delete any post** — the "Delete" button shows on every post for an admin, not just their own.
 - **Send a warning** — a "Warn" button (hidden on your own posts) opens a modal to write a message; it's saved to the `warnings` table tied to that post's author. Next time the warned user loads the feed, a blocking modal lists every unread warning (with the post it was about) and requires clicking "I understand" before it's marked read and dismissed.

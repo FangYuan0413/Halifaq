@@ -15,6 +15,7 @@ import BackgroundShapes from "@/components/BackgroundShapes";
 import Logo from "@/components/Logo";
 import { MediaItem } from "@/components/MediaCarousel";
 import PostCard from "@/components/PostCard";
+import AdminBadge from "@/components/AdminBadge";
 import { useToast } from "@/components/ToastProvider";
 import {
   highlightMatch,
@@ -45,7 +46,7 @@ type Post = {
   media: MediaItem[];
   views: number;
   commentCount: number;
-  profiles: { username: string; avatar_url: string | null } | null;
+  profiles: { username: string; avatar_url: string | null; is_admin?: boolean } | null;
   tags: Tag[];
   likedBy: string[];
 };
@@ -104,7 +105,7 @@ export default function FeedPage() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, views, profiles!posts_author_id_fkey(username, avatar_url), post_categories(categories(id, name)), post_likes(user_id), comments(count), post_media(url, media_type, position)"
+        "id, title, body, created_at, author_id, views, profiles!posts_author_id_fkey(username, avatar_url, is_admin), post_categories(categories(id, name)), post_likes(user_id), comments(count), post_media(url, media_type, position)"
       )
       .order("created_at", { ascending: false });
 
@@ -629,8 +630,9 @@ export default function FeedPage() {
               href={userId ? `/profile/${userId}` : "#"}
               className="block hover:opacity-80"
             >
-              <p className="truncate text-sm font-medium text-white">
+              <p className="flex items-center gap-1.5 truncate text-sm font-medium text-white">
                 {username ?? "You"}
+                {isAdmin && <AdminBadge />}
               </p>
               <p className="truncate text-xs text-gray-500">{email}</p>
             </Link>
