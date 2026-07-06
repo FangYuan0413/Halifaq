@@ -113,6 +113,7 @@ export default function SearchResults() {
     const trimmed = term.trim();
     if (!trimmed) return;
     addSearchHistoryTerm(trimmed, loadSearchHistory());
+    showToast(`Searching for "${trimmed}"…`);
     router.push(`/search?q=${encodeURIComponent(trimmed)}`);
   }
 

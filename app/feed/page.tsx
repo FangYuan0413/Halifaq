@@ -644,9 +644,11 @@ export default function FeedPage() {
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && searchQuery.trim()) {
-                    addToHistory(searchQuery.trim());
+                    const term = searchQuery.trim();
+                    addToHistory(term);
                     setShowSearchDropdown(false);
-                    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                    showToast(`Searching for "${term}"…`);
+                    router.push(`/search?q=${encodeURIComponent(term)}`);
                   }
                 }}
                 placeholder="Search posts or people… (press Enter for full results)"
@@ -751,6 +753,7 @@ export default function FeedPage() {
                                   onClick={() => {
                                     addToHistory(term);
                                     setShowSearchDropdown(false);
+                                    showToast(`Searching for "${term}"…`);
                                     router.push(`/search?q=${encodeURIComponent(term)}`);
                                   }}
                                   className="max-w-[9rem] truncate hover:text-white"
