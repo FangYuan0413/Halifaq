@@ -22,6 +22,13 @@ import {
   buildPreferenceProfile,
   forYouScore,
 } from "@/utils/postDisplay";
+import {
+  loadSearchHistory,
+  addSearchHistoryTerm,
+  removeSearchHistoryTerm,
+  clearSearchHistory,
+  SEARCH_HISTORY_VISIBLE_COUNT,
+} from "@/utils/searchHistory";
 
 const MAX_IMAGES = 9;
 
@@ -114,46 +121,25 @@ export default function FeedPage() {
   }
 
   // Recent search terms, kept in this browser only (localStorage) — shows
-  // above "Popular searches" when the search box is empty. Capped at 30
-  // stored, but only the first 10 show until "Show more" is clicked.
-  const HISTORY_KEY = "halifaq_search_history";
-  const HISTORY_VISIBLE_COUNT = 10;
+  // above "Popular searches" when the search box is empty, and shared with
+  // the dedicated /search results page.
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      if (raw) setSearchHistory(JSON.parse(raw));
-    } catch {
-      // localStorage unavailable (private browsing, etc.) — just skip history
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setSearchHistory(loadSearchHistory());
   }, []);
 
-  function saveHistory(next: string[]) {
-    setSearchHistory(next);
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
-    } catch {
-      // ignore — history just won't persist this session
-    }
-  }
-
   function addToHistory(term: string) {
-    const trimmed = term.trim();
-    if (!trimmed) return;
-    saveHistory(
-      [trimmed, ...searchHistory.filter((h) => h !== trimmed)].slice(0, 30)
-    );
+    setSearchHistory(addSearchHistoryTerm(term, searchHistory));
   }
 
   function removeFromHistory(term: string) {
-    saveHistory(searchHistory.filter((h) => h !== term));
+    setSearchHistory(removeSearchHistoryTerm(term, searchHistory));
   }
 
   function clearHistory() {
-    saveHistory([]);
+    setSearchHistory(clearSearchHistory());
     setHistoryExpanded(false);
   }
 
@@ -659,9 +645,11 @@ export default function FeedPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && searchQuery.trim()) {
                     addToHistory(searchQuery.trim());
+                    setShowSearchDropdown(false);
+                    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
                   }
                 }}
-                placeholder="Search posts or people…"
+                placeholder="Search posts or people… (press Enter for full results)"
                 className="w-full rounded-full border border-white/10 bg-neutral-900 px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40"
               />
 
@@ -748,7 +736,10 @@ export default function FeedPage() {
                           <div className="flex flex-wrap gap-1.5">
                             {(historyExpanded
                               ? searchHistory
-                              : searchHistory.slice(0, HISTORY_VISIBLE_COUNT)
+                              : searchHistory.slice(
+                                  0,
+                                  SEARCH_HISTORY_VISIBLE_COUNT
+                                )
                             ).map((term) => (
                               <div
                                 key={term}
@@ -758,8 +749,9 @@ export default function FeedPage() {
                                   type="button"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => {
-                                    setSearchQuery(term);
                                     addToHistory(term);
+                                    setShowSearchDropdown(false);
+                                    router.push(`/search?q=${encodeURIComponent(term)}`);
                                   }}
                                   className="max-w-[9rem] truncate hover:text-white"
                                 >
@@ -777,7 +769,7 @@ export default function FeedPage() {
                               </div>
                             ))}
                           </div>
-                          {searchHistory.length > HISTORY_VISIBLE_COUNT && (
+                          {searchHistory.length > SEARCH_HISTORY_VISIBLE_COUNT && (
                             <button
                               type="button"
                               onMouseDown={(e) => e.preventDefault()}

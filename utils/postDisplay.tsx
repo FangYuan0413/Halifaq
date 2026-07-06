@@ -4,6 +4,33 @@ import { ReactNode } from "react";
 export const TRENDING_VIEWS = 50;
 export const TRENDING_LIKES = 5;
 
+export type SearchablePost = { title: string; body: string };
+
+// How well a post matches a search query: an exact phrase match in the
+// title is the strongest signal, then a phrase match in the body, then
+// individual word overlap (title words weighted higher than body words).
+// Returns 0 for "no match at all" so callers can filter those out entirely.
+export function keywordRelevanceScore(post: SearchablePost, query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+
+  const title = post.title.toLowerCase();
+  const body = post.body.toLowerCase();
+
+  let score = 0;
+  if (title.includes(q)) score += 10;
+  if (body.includes(q)) score += 4;
+
+  q.split(/\s+/)
+    .filter(Boolean)
+    .forEach((word) => {
+      if (title.includes(word)) score += 3;
+      if (body.includes(word)) score += 1;
+    });
+
+  return score;
+}
+
 // Turns a timestamp into "just now" / "5m ago" / "3h ago" / "2d ago", falling
 // back to a plain date once it's more than a week old.
 export function formatRelativeTime(dateString: string) {
