@@ -1,8 +1,47 @@
-// Shared decorative background: soft glowing white triangles, squares, and
-// circles drifting slowly on a dark page. Drop this as the first child inside
-// a `relative overflow-hidden` wrapper, and give your real content `relative z-10`
-// so it stays above these shapes.
+"use client";
+
+import { useEffect, useState } from "react";
+import MikuChibi from "./MikuChibi";
+import { Theme, THEME_CHANGE_EVENT, getCurrentTheme } from "@/utils/theme";
+
+// Shared decorative background. On the Dark/Light themes: soft glowing
+// triangles, squares, and circles drifting slowly. On the Miku theme: a few
+// chibi Mikus flying past instead, since a plain recolor of abstract shapes
+// doesn't really read as "Miku" the way an actual little face does.
+// Drop this as the first child inside a `relative overflow-hidden` wrapper,
+// and give your real content `relative z-10` so it stays above these shapes.
 export default function BackgroundShapes() {
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
+    setTheme(getCurrentTheme());
+
+    function onThemeChange(e: Event) {
+      const detail = (e as CustomEvent<Theme>).detail;
+      if (detail) setTheme(detail);
+    }
+
+    window.addEventListener(THEME_CHANGE_EVENT, onThemeChange);
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, onThemeChange);
+  }, []);
+
+  if (theme === "miku") {
+    return (
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <MikuChibi className="animate-fly-1 absolute -left-16 top-12 h-20 w-20 opacity-70" />
+        <MikuChibi
+          className="animate-fly-2 absolute -right-14 top-1/3 h-16 w-16 opacity-60"
+          hairColor="#2fb0a7"
+        />
+        <MikuChibi className="animate-fly-3 absolute -left-10 bottom-24 h-14 w-14 opacity-50" />
+        <MikuChibi
+          className="animate-fly-4 absolute -right-12 bottom-10 h-24 w-24 opacity-40"
+          hairColor="#57d6cc"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg

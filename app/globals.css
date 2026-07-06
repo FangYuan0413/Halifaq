@@ -343,13 +343,20 @@
    they read as part of the theme without needing their own overrides. */
 [data-theme="miku"] .bg-black,
 [data-theme="miku"] .hover\:bg-black:hover {
-  background-color: #071614;
+  background-color: #12181a;
 }
 [data-theme="miku"] .bg-neutral-900 {
-  background-color: #0e2320;
+  background-color: #1c2b29;
 }
 [data-theme="miku"] .bg-neutral-900\/95 {
-  background-color: rgba(14, 35, 32, 0.95);
+  background-color: rgba(28, 43, 41, 0.95);
+}
+/* Hearts/likes borrow Miku's pink hair-tie accent instead of red. */
+[data-theme="miku"] .text-red-400 {
+  color: #ff5fa8;
+}
+[data-theme="miku"] .hover\:text-red-400:hover {
+  color: #ff5fa8;
 }
 [data-theme="miku"] .text-white {
   color: #eafffb;
@@ -427,4 +434,57 @@
 }
 [data-theme="miku"] .bg-shape * {
   fill: #39c5bb;
+}
+
+/* Chibi Mikus drifting/flying past for the Miku theme's background
+   (BackgroundShapes.tsx) — bigger, more diagonal travel than the abstract
+   shapes' gentle float, so they read as "flying by" rather than hovering. */
+@keyframes fly-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-6deg);
+  }
+  50% {
+    transform: translate(60px, -50px) rotate(4deg);
+  }
+}
+@keyframes fly-2 {
+  0%,
+  100% {
+    transform: scaleX(-1) translate(0, 0) rotate(5deg);
+  }
+  50% {
+    transform: scaleX(-1) translate(-70px, 40px) rotate(-6deg);
+  }
+}
+@keyframes fly-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-4deg);
+  }
+  50% {
+    transform: translate(45px, 35px) rotate(8deg);
+  }
+}
+@keyframes fly-4 {
+  0%,
+  100% {
+    transform: scaleX(-1) translate(0, 0) rotate(6deg);
+  }
+  50% {
+    transform: scaleX(-1) translate(-55px, -30px) rotate(-5deg);
+  }
+}
+
+.animate-fly-1 {
+  animation: fly-1 13s ease-in-out infinite;
+}
+.animate-fly-2 {
+  animation: fly-2 16s ease-in-out infinite;
+}
+.animate-fly-3 {
+  animation: fly-3 19s ease-in-out infinite;
+}
+.animate-fly-4 {
+  animation: fly-4 15s ease-in-out infinite;
 }
