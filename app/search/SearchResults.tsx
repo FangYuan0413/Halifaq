@@ -223,8 +223,8 @@ export default function SearchResults() {
             ) : (
               <p>
                 {results.length > 0
-                  ? `${results.length} ${results.length === 1 ? "result" : "results"} for “${query}”, closest match first`
-                  : `No related posts found for “${query}”.`}
+                  ? `${results.length} ${results.length === 1 ? "result" : "results"} for "${query}", closest match first`
+                  : `No related posts found for "${query}".`}
               </p>
             )}
           </div>
@@ -233,7 +233,7 @@ export default function SearchResults() {
         {!loadingResults && query && results.length === 0 && (
           <p className="text-center text-sm text-gray-500">
             Try a different keyword, or check the spelling — nothing in
-            HalifaQ's posts matches this one yet.
+            HalifaQ&apos;s posts matches this one yet.
           </p>
         )}
 
