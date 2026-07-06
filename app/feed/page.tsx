@@ -18,6 +18,7 @@ import PostCard from "@/components/PostCard";
 import AdminBadge from "@/components/AdminBadge";
 import InboxIcon from "@/components/InboxIcon";
 import MikuChibi from "@/components/MikuChibi";
+import DailyLifeMikuButton from "@/components/DailyLifeMikuButton";
 import { useTheme } from "@/utils/useTheme";
 import { useToast } from "@/components/ToastProvider";
 import {
@@ -676,15 +677,19 @@ export default function FeedPage() {
             >
               All
             </button>
-            {categories.map((c) => (
-              <Link
-                key={c.id}
-                href={`/category/${c.slug}`}
-                className="rounded-lg px-3 py-2 text-left text-sm text-gray-400 transition hover:bg-white/5"
-              >
-                {c.name}
-              </Link>
-            ))}
+            {categories.map((c) =>
+              theme === "miku" && c.slug === "daily-life" ? (
+                <DailyLifeMikuButton key={c.id} className="my-1 h-9 w-full" />
+              ) : (
+                <Link
+                  key={c.id}
+                  href={`/category/${c.slug}`}
+                  className="rounded-lg px-3 py-2 text-left text-sm text-gray-400 transition hover:bg-white/5"
+                >
+                  {c.name}
+                </Link>
+              )
+            )}
           </nav>
         </aside>
 
@@ -1005,15 +1010,19 @@ export default function FeedPage() {
               >
                 All
               </button>
-              {categories.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/category/${c.slug}`}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-400"
-                >
-                  {c.name}
-                </Link>
-              ))}
+              {categories.map((c) =>
+                theme === "miku" && c.slug === "daily-life" ? (
+                  <DailyLifeMikuButton key={c.id} className="h-7 px-4" />
+                ) : (
+                  <Link
+                    key={c.id}
+                    href={`/category/${c.slug}`}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-400"
+                  >
+                    {c.name}
+                  </Link>
+                )
+              )}
             </div>
 
             {/* Feed — 2-column waterfall layout */}
