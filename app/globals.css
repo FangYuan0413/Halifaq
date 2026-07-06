@@ -511,3 +511,27 @@
 [data-theme="light"] .border-t-white {
   border-top-color: rgba(0, 0, 0, 0.55);
 }
+
+/* Click/tap feedback for the Miku theme's category buttons (Daily Life,
+   Education): a quick squash-and-hop played on the chibi Miku badge itself
+   the moment you click, on top of the button's own native active:scale. */
+@keyframes miku-tap-bounce {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+  30% {
+    transform: translateY(2px) scale(1.12, 0.88);
+  }
+  55% {
+    transform: translateY(-10px) scale(0.94, 1.08);
+  }
+  80% {
+    transform: translateY(0) scale(1.04, 0.97);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+.animate-miku-tap {
+  animation: miku-tap-bounce 0.5s ease-out;
+}

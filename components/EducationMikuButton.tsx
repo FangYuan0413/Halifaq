@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useToast } from "./ToastProvider";
 
@@ -7,19 +8,25 @@ import { useToast } from "./ToastProvider";
 // warm wooden bookshelf button (real transparent corners, no forced CSS
 // shape) with a small chibi Miku sitting cross-legged and reading right on
 // top of the shelf's top ledge, centered and above the button's z-index,
-// with a toast on click.
+// a toast on click, and a quick squash-and-hop played on Miku herself for
+// tap feedback. The centering (left: 50% + translateX) lives on a wrapper
+// span so it doesn't fight with the bounce animation's own transform.
 export default function EducationMikuButton({
   className = "",
 }: {
   className?: string;
 }) {
   const { showToast } = useToast();
+  const [tapped, setTapped] = useState(false);
 
   return (
     <Link
       href="/category/education"
-      onClick={() => showToast("Off to Education~ 📚")}
-      className={`group relative flex shrink-0 items-center justify-center transition hover:brightness-110 ${className}`}
+      onClick={() => {
+        showToast("Off to Education~ 📚");
+        setTapped(true);
+      }}
+      className={`group relative flex shrink-0 items-center justify-center transition hover:brightness-110 active:scale-95 ${className}`}
       style={{ aspectRatio: "900 / 395" }}
     >
       <img
@@ -30,17 +37,24 @@ export default function EducationMikuButton({
       <span className="relative z-10 text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
         Education
       </span>
-      <img
-        src="/miku-reading.png"
-        alt=""
+      <span
         style={{
           height: "71%",
           top: "-60%",
           left: "50%",
           transform: "translateX(-50%)",
         }}
-        className="pointer-events-none absolute z-20 w-auto max-w-none object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] transition group-hover:-translate-y-1"
-      />
+        className="pointer-events-none absolute z-20"
+      >
+        <img
+          src="/miku-reading.png"
+          alt=""
+          onAnimationEnd={() => setTapped(false)}
+          className={`h-full w-auto max-w-none object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] transition group-hover:-translate-y-1 ${
+            tapped ? "animate-miku-tap" : ""
+          }`}
+        />
+      </span>
     </Link>
   );
 }
