@@ -47,6 +47,7 @@ export default function CategoryPage() {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [category, setCategory] = useState<Category | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [notFound, setNotFound] = useState(false);
@@ -108,6 +109,13 @@ export default function CategoryPage() {
 
       setUserId(user.id);
       setLoadingAuth(false);
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+      setIsAdmin(profileData?.is_admin ?? false);
 
       const { data: cat, error } = await supabase
         .from("categories")
@@ -179,6 +187,26 @@ export default function CategoryPage() {
     }
   }
 
+  async function handleSendWarning(
+    authorId: string,
+    postId: string,
+    postTitle: string,
+    message: string
+  ) {
+    const { error } = await supabase.from("warnings").insert({
+      user_id: authorId,
+      issued_by: userId,
+      post_title: postTitle,
+      message,
+    });
+
+    if (error) {
+      showToast(`Couldn't send warning — ${error.message}`, "error");
+    } else {
+      showToast("Warning sent.");
+    }
+  }
+
   if (loadingAuth) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black">
@@ -231,8 +259,10 @@ export default function CategoryPage() {
                 key={post.id}
                 post={post}
                 userId={userId}
+                isAdmin={isAdmin}
                 onToggleLike={toggleLike}
                 onDelete={handleDelete}
+                onSendWarning={handleSendWarning}
               />
             ))}
           </div>

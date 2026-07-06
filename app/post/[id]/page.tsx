@@ -56,12 +56,18 @@ export default function PostDetailPage() {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [post, setPost] = useState<PostDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [reply, setReply] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+
+  // Admin "warn the author" modal.
+  const [warnOpen, setWarnOpen] = useState(false);
+  const [warnMessage, setWarnMessage] = useState("");
+  const [sendingWarning, setSendingWarning] = useState(false);
 
   // Up to 3 photos on a reply.
   const [replyMediaFiles, setReplyMediaFiles] = useState<File[]>([]);
@@ -320,6 +326,14 @@ export default function PostDetailPage() {
 
       setUserId(user.id);
       setLoadingAuth(false);
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+      setIsAdmin(profileData?.is_admin ?? false);
+
       await loadPost();
       await loadComments();
       // Fire-and-forget: bump this post's view count (used for the feed's
@@ -433,6 +447,28 @@ export default function PostDetailPage() {
     }
   }
 
+  async function handleSendWarning() {
+    if (!post || !warnMessage.trim()) return;
+    setSendingWarning(true);
+
+    const { error } = await supabase.from("warnings").insert({
+      user_id: post.author_id,
+      issued_by: userId,
+      post_title: post.title,
+      message: warnMessage.trim(),
+    });
+
+    setSendingWarning(false);
+
+    if (error) {
+      showToast(`Couldn't send warning — ${error.message}`, "error");
+    } else {
+      showToast("Warning sent.");
+      setWarnOpen(false);
+      setWarnMessage("");
+    }
+  }
+
   if (loadingAuth) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black">
@@ -456,6 +492,9 @@ export default function PostDetailPage() {
       </main>
     );
   }
+
+  const canDeletePost = !!post && (post.author_id === userId || isAdmin);
+  const canWarnAuthor = !!post && isAdmin && post.author_id !== userId;
 
   const topLevelComments = comments.filter((c) => !c.parent_comment_id);
   const repliesByParent = new Map<string, Comment[]>();
@@ -508,10 +547,18 @@ export default function PostDetailPage() {
                 </span>
               ))}
               <span>{new Date(post.created_at).toLocaleDateString()}</span>
-              {post.author_id === userId && (
+              {canWarnAuthor && (
+                <button
+                  onClick={() => setWarnOpen(true)}
+                  className="ml-auto text-gray-600 hover:text-amber-400"
+                >
+                  Warn
+                </button>
+              )}
+              {canDeletePost && (
                 <button
                   onClick={handleDeletePost}
-                  className="ml-auto text-gray-600 hover:text-red-400"
+                  className={canWarnAuthor ? "text-gray-600 hover:text-red-400" : "ml-auto text-gray-600 hover:text-red-400"}
                 >
                   Delete
                 </button>
@@ -822,6 +869,59 @@ export default function PostDetailPage() {
           })}
         </div>
       </div>
+
+      {warnOpen && post && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setWarnOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-900 p-4 shadow-[0_0_40px_rgba(255,255,255,0.08)]"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-medium text-white">
+                Warn {post.profiles?.username ?? "this user"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setWarnOpen(false)}
+                className="text-gray-500 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <p className="mb-2 text-xs text-gray-500">
+              About: <span className="text-gray-300">{post.title}</span>
+            </p>
+            <textarea
+              value={warnMessage}
+              onChange={(e) => setWarnMessage(e.target.value)}
+              placeholder="Explain what rule this post breaks…"
+              rows={3}
+              autoFocus
+              className="w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setWarnOpen(false)}
+                className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-gray-300 hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendWarning}
+                disabled={sendingWarning || !warnMessage.trim()}
+                className="rounded-full bg-amber-400 px-4 py-1.5 text-xs font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
+              >
+                {sendingWarning ? "Sending…" : "Send warning"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

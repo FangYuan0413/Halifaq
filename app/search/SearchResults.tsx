@@ -49,6 +49,7 @@ export default function SearchResults() {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [inputValue, setInputValue] = useState(initialQuery);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingResults, setLoadingResults] = useState(true);
@@ -96,6 +97,14 @@ export default function SearchResults() {
 
       setUserId(user.id);
       setLoadingAuth(false);
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+      setIsAdmin(profileData?.is_admin ?? false);
+
       setLoadingResults(true);
       await loadPosts();
       setLoadingResults(false);
@@ -167,6 +176,26 @@ export default function SearchResults() {
       showToast("Post deleted.");
     } else {
       showToast(`Couldn't delete post — ${error.message}`, "error");
+    }
+  }
+
+  async function handleSendWarning(
+    authorId: string,
+    postId: string,
+    postTitle: string,
+    message: string
+  ) {
+    const { error } = await supabase.from("warnings").insert({
+      user_id: authorId,
+      issued_by: userId,
+      post_title: postTitle,
+      message,
+    });
+
+    if (error) {
+      showToast(`Couldn't send warning — ${error.message}`, "error");
+    } else {
+      showToast("Warning sent.");
     }
   }
 
@@ -245,8 +274,10 @@ export default function SearchResults() {
                 post={post}
                 userId={userId}
                 query={query}
+                isAdmin={isAdmin}
                 onToggleLike={toggleLike}
                 onDelete={handleDelete}
+                onSendWarning={handleSendWarning}
               />
             ))}
           </div>

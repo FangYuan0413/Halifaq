@@ -60,6 +60,13 @@ type RawPost = Omit<Post, "tags" | "likedBy" | "commentCount" | "media"> & {
 
 type FeedTab = "all" | "following" | "hot" | "forYou";
 
+type Warning = {
+  id: string;
+  message: string;
+  post_title: string | null;
+  created_at: string;
+};
+
 export default function FeedPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -69,6 +76,8 @@ export default function FeedPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingWarnings, setPendingWarnings] = useState<Warning[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [followingIds, setFollowingIds] = useState<string[]>([]);
@@ -160,10 +169,11 @@ export default function FeedPage() {
 
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("username")
+        .select("username, is_admin")
         .eq("id", user.id)
         .single();
       setUsername(profileData?.username ?? null);
+      setIsAdmin(profileData?.is_admin ?? false);
 
       const { data: cats } = await supabase
         .from("categories")
@@ -176,6 +186,14 @@ export default function FeedPage() {
         .select("following_id")
         .eq("follower_id", user.id);
       setFollowingIds((followRows ?? []).map((r) => r.following_id));
+
+      const { data: warningRows } = await supabase
+        .from("warnings")
+        .select("id, message, post_title, created_at")
+        .eq("user_id", user.id)
+        .eq("read", false)
+        .order("created_at", { ascending: true });
+      setPendingWarnings(warningRows ?? []);
 
       await loadPosts();
     }
@@ -442,6 +460,32 @@ export default function FeedPage() {
     router.refresh();
   }
 
+  async function handleSendWarning(
+    authorId: string,
+    postId: string,
+    postTitle: string,
+    message: string
+  ) {
+    const { error } = await supabase.from("warnings").insert({
+      user_id: authorId,
+      issued_by: userId,
+      post_title: postTitle,
+      message,
+    });
+
+    if (error) {
+      showToast(`Couldn't send warning — ${error.message}`, "error");
+    } else {
+      showToast("Warning sent.");
+    }
+  }
+
+  async function acknowledgeWarnings() {
+    const ids = pendingWarnings.map((w) => w.id);
+    setPendingWarnings([]);
+    await supabase.from("warnings").update({ read: true }).in("id", ids);
+  }
+
   if (loadingAuth) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black">
@@ -532,6 +576,47 @@ export default function FeedPage() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       <BackgroundShapes />
+
+      {pendingWarnings.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-amber-400/30 bg-neutral-900 p-5 shadow-[0_0_40px_rgba(251,191,36,0.15)]">
+            <p className="mb-1 text-sm font-semibold text-amber-300">
+              {pendingWarnings.length === 1
+                ? "You've received a warning"
+                : `You've received ${pendingWarnings.length} warnings`}
+            </p>
+            <p className="mb-4 text-xs text-gray-500">
+              A moderator flagged the following. Please review HalifaQ&apos;s
+              community guidelines.
+            </p>
+            <div className="max-h-64 space-y-3 overflow-y-auto">
+              {pendingWarnings.map((w) => (
+                <div
+                  key={w.id}
+                  className="rounded-xl border border-white/10 bg-black/40 p-3"
+                >
+                  {w.post_title && (
+                    <p className="mb-1 text-xs text-gray-500">
+                      About: <span className="text-gray-300">{w.post_title}</span>
+                    </p>
+                  )}
+                  <p className="text-sm text-gray-200">{w.message}</p>
+                  <p className="mt-1 text-[10px] text-gray-600">
+                    {new Date(w.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={acknowledgeWarnings}
+              className="mt-4 w-full rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-black transition hover:opacity-90"
+            >
+              I understand
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="relative z-10 flex min-h-screen">
         {/* Sidebar */}
@@ -938,8 +1023,10 @@ export default function FeedPage() {
                     post={post}
                     userId={userId}
                     query={query}
+                    isAdmin={isAdmin}
                     onToggleLike={toggleLike}
                     onDelete={handleDelete}
+                    onSendWarning={handleSendWarning}
                   />
                 ))}
               </div>
