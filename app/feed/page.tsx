@@ -19,6 +19,7 @@ import AdminBadge from "@/components/AdminBadge";
 import InboxIcon from "@/components/InboxIcon";
 import MikuChibi from "@/components/MikuChibi";
 import DailyLifeMikuButton from "@/components/DailyLifeMikuButton";
+import EducationMikuButton from "@/components/EducationMikuButton";
 import { useTheme } from "@/utils/useTheme";
 import { useToast } from "@/components/ToastProvider";
 import {
@@ -680,6 +681,8 @@ export default function FeedPage() {
             {categories.map((c) =>
               theme === "miku" && c.slug === "daily-life" ? (
                 <DailyLifeMikuButton key={c.id} className="my-2 h-10 self-start" />
+              ) : theme === "miku" && c.slug === "education" ? (
+                <EducationMikuButton key={c.id} className="my-2 h-10 self-start" />
               ) : (
                 <Link
                   key={c.id}
@@ -1013,6 +1016,8 @@ export default function FeedPage() {
               {categories.map((c) =>
                 theme === "miku" && c.slug === "daily-life" ? (
                   <DailyLifeMikuButton key={c.id} className="h-8" />
+                ) : theme === "miku" && c.slug === "education" ? (
+                  <EducationMikuButton key={c.id} className="h-8" />
                 ) : (
                   <Link
                     key={c.id}
