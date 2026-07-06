@@ -17,6 +17,8 @@ import { MediaItem } from "@/components/MediaCarousel";
 import PostCard from "@/components/PostCard";
 import AdminBadge from "@/components/AdminBadge";
 import InboxIcon from "@/components/InboxIcon";
+import MikuChibi from "@/components/MikuChibi";
+import { useTheme } from "@/utils/useTheme";
 import { useToast } from "@/components/ToastProvider";
 import {
   highlightMatch,
@@ -73,6 +75,7 @@ export default function FeedPage() {
   const router = useRouter();
   const supabase = createClient();
   const { showToast } = useToast();
+  const theme = useTheme();
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -1050,9 +1053,13 @@ export default function FeedPage() {
         aria-label="New post"
         className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-black text-white ring-1 ring-white/30 shadow-[0_0_25px_rgba(255,255,255,0.45)] transition hover:shadow-[0_0_35px_rgba(255,255,255,0.7)]"
       >
-        <span className="text-3xl leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]">
-          +
-        </span>
+        {theme === "miku" ? (
+          <MikuChibi className="h-11 w-11" />
+        ) : (
+          <span className="text-3xl leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]">
+            +
+          </span>
+        )}
       </button>
 
       {/* Compose modal */}

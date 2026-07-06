@@ -66,6 +66,7 @@ You'll need [Node.js](https://nodejs.org) (18+) installed on your computer.
 - `utils/theme.ts` — the `Theme` type (`"dark" | "light" | "miku"`), `applyTheme` (sets `<html data-theme>` + caches to `localStorage`), and `getCachedTheme`.
 - `components/ThemeApplier.tsx` — mounted once in `app/layout.tsx`; reconciles the signed-in user's saved `profiles.theme` with whatever the no-flash inline script in `<head>` already applied from `localStorage`.
 - `components/MikuChibi.tsx` — a small hand-drawn SVG chibi face (teal twintails, pink hair ties) used by the Miku theme in place of the abstract background shapes, and as the Miku-theme loading spinner.
+- `utils/useTheme.ts` — a `useTheme()` hook (current theme, updates live off the `halifaq-theme-change` event) for anything that needs to swap content per theme beyond what CSS overrides can do — currently used by the feed's "new post" FAB, which shows `MikuChibi` instead of a plain `+` on the Miku theme.
 
 ## Supabase setup (already done, for reference)
 

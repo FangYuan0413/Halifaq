@@ -1,6 +1,7 @@
-// A small hand-drawn chibi face (twin teal pigtails + pink hair ties),
-// used to give the Miku theme its own decorative flair — floating in the
-// background and as the Miku-theme loading spinner — instead of just
+// A small hand-drawn chibi face (big round eyes, eyebrows, headphone
+// earcups, chunky teal twintails with pink accents), used to give the Miku
+// theme its own decorative flair — floating in the background, as the
+// Miku-theme loading spinner, and on a few buttons — instead of just
 // recoloring the app's existing abstract shapes.
 export default function MikuChibi({
   className = "",
@@ -12,37 +13,74 @@ export default function MikuChibi({
   return (
     <svg viewBox="0 0 100 100" className={className}>
       {/* twintails, drawn behind the head */}
-      <path
-        d="M22 38 C 2 55, -2 78, 14 96 C 16 78, 24 62, 32 50 Z"
+      <ellipse
+        cx="14"
+        cy="68"
+        rx="15"
+        ry="27"
         fill={hairColor}
+        transform="rotate(-18 14 68)"
       />
-      <path
-        d="M78 38 C 98 55, 102 78, 86 96 C 84 78, 76 62, 68 50 Z"
+      <ellipse
+        cx="86"
+        cy="68"
+        rx="15"
+        ry="27"
         fill={hairColor}
+        transform="rotate(18 86 68)"
       />
-      {/* hair ties */}
-      <rect x="17" y="35" width="12" height="7" rx="3.5" fill="#ff8fc7" />
-      <rect x="71" y="35" width="12" height="7" rx="3.5" fill="#ff8fc7" />
+
+      {/* headphone earcups */}
+      <rect x="13" y="40" width="11" height="23" rx="5.5" fill="#3a3a3a" />
+      <rect x="16.5" y="45" width="4" height="13" rx="2" fill="#ff8fc7" />
+      <rect x="76" y="40" width="11" height="23" rx="5.5" fill="#3a3a3a" />
+      <rect x="79.5" y="45" width="4" height="13" rx="2" fill="#ff8fc7" />
+
       {/* head */}
-      <circle cx="50" cy="48" r="27" fill="#ffe7db" />
+      <circle cx="50" cy="53" r="34" fill="#ffe9db" />
+
       {/* bangs */}
       <path
-        d="M23 44 C 23 18, 77 18, 77 44 C 77 30, 62 24, 50 24 C 38 24, 23 30, 23 44 Z"
+        d="M17 49 C17 12, 83 12, 83 49 C83 29, 67 20, 50 20 C33 20, 17 29, 17 49 Z"
         fill={hairColor}
       />
-      {/* eyes */}
-      <ellipse cx="40" cy="50" rx="3.2" ry="4.2" fill="#20393a" />
-      <ellipse cx="60" cy="50" rx="3.2" ry="4.2" fill="#20393a" />
-      <circle cx="41.3" cy="47.5" r="1" fill="#fff" />
-      <circle cx="61.3" cy="47.5" r="1" fill="#fff" />
-      {/* blush */}
-      <circle cx="34" cy="58" r="4" fill="#ffb3c6" opacity="0.55" />
-      <circle cx="66" cy="58" r="4" fill="#ffb3c6" opacity="0.55" />
-      {/* smile */}
+
+      {/* eyebrows */}
       <path
-        d="M45 60 Q50 64 55 60"
-        stroke="#20393a"
-        strokeWidth="1.6"
+        d="M32 45 Q38 40 45 43"
+        stroke="#1c3a3a"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M55 43 Q62 40 68 45"
+        stroke="#1c3a3a"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* eyes */}
+      <circle cx="39" cy="56" r="7.2" fill="#ffffff" />
+      <circle cx="39" cy="57" r="5.6" fill={hairColor} />
+      <circle cx="39" cy="57.5" r="2.6" fill="#16302f" />
+      <circle cx="41.2" cy="54" r="1.7" fill="#ffffff" />
+
+      <circle cx="61" cy="56" r="7.2" fill="#ffffff" />
+      <circle cx="61" cy="57" r="5.6" fill={hairColor} />
+      <circle cx="61" cy="57.5" r="2.6" fill="#16302f" />
+      <circle cx="63.2" cy="54" r="1.7" fill="#ffffff" />
+
+      {/* blush */}
+      <ellipse cx="31" cy="67" rx="5.2" ry="3.2" fill="#ffb3c6" opacity="0.65" />
+      <ellipse cx="69" cy="67" rx="5.2" ry="3.2" fill="#ffb3c6" opacity="0.65" />
+
+      {/* mouth */}
+      <path
+        d="M46 71 Q50 74.5 54 71"
+        stroke="#16302f"
+        strokeWidth="1.8"
         fill="none"
         strokeLinecap="round"
       />
