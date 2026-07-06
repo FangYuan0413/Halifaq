@@ -721,6 +721,72 @@ export default function FeedPage() {
                       )}
                     </>
                   )}
+
+                  {/* Tag filter — combine with the keyword search above.
+                      Doesn't close the dropdown, so you can toggle a few
+                      tags without losing your place. */}
+                  <div className="mt-4 border-t border-white/10 pt-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Filter by tag
+                      </p>
+                      {filterCategoryIds.length > 0 && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => setFilterCategoryIds([])}
+                          className="text-xs text-gray-500 hover:text-white"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {categories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => toggleFilterCategory(c.id)}
+                          className={`rounded-full px-2.5 py-1 text-xs transition ${
+                            filterCategoryIds.includes(c.id)
+                              ? "bg-white text-black"
+                              : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10"
+                          }`}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {filterCategoryIds.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-gray-500">Filtering:</span>
+                  {filterCategoryIds.map((id) => {
+                    const cat = categories.find((c) => c.id === id);
+                    if (!cat) return null;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => toggleFilterCategory(id)}
+                        className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-black"
+                      >
+                        {cat.name}
+                        <span className="text-gray-500">×</span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setFilterCategoryIds([])}
+                    className="text-xs text-gray-500 hover:text-white"
+                  >
+                    Clear all
+                  </button>
                 </div>
               )}
             </div>
