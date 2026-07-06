@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, ChangeEvent, FormEvent } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
@@ -8,12 +8,20 @@ import BackgroundShapes from "@/components/BackgroundShapes";
 import MediaCarousel, { MediaItem } from "@/components/MediaCarousel";
 import { useToast } from "@/components/ToastProvider";
 
+const MAX_REPLY_IMAGES = 3;
+
 type Comment = {
   id: string;
   body: string;
   created_at: string;
   author_id: string;
+  media: MediaItem[];
   profiles: { username: string; avatar_url: string | null } | null;
+};
+
+// Shape Supabase returns for the nested join
+type RawComment = Omit<Comment, "media"> & {
+  comment_media: { url: string; position: number }[] | null;
 };
 
 type Tag = { id: number; name: string };
@@ -53,6 +61,11 @@ export default function PostDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
 
+  // Up to 3 photos on a reply.
+  const [replyMediaFiles, setReplyMediaFiles] = useState<File[]>([]);
+  const [replyMediaPreviews, setReplyMediaPreviews] = useState<string[]>([]);
+  const replyFileInputRef = useRef<HTMLInputElement>(null);
+
   async function loadPost() {
     const { data, error } = await supabase
       .from("posts")
@@ -86,13 +99,63 @@ export default function PostDetailPage() {
   async function loadComments() {
     const { data, error } = await supabase
       .from("comments")
-      .select("id, body, created_at, author_id, profiles(username, avatar_url)")
+      .select(
+        "id, body, created_at, author_id, profiles(username, avatar_url), comment_media(url, position)"
+      )
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
 
-    if (!error && data) {
-      setComments(data as unknown as Comment[]);
+    if (error) {
+      console.error("loadComments failed", error);
     }
+
+    if (!error && data) {
+      const withMedia = (data as unknown as RawComment[]).map((c) => ({
+        ...c,
+        media: (c.comment_media ?? [])
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((m) => ({ url: m.url, media_type: "image" })),
+      }));
+      setComments(withMedia);
+    }
+  }
+
+  function handleReplyFileSelect(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    const room = MAX_REPLY_IMAGES - replyMediaFiles.length;
+    const oversized = files.some((f) => f.size > 20 * 1024 * 1024);
+    const usable = files.filter((f) => f.size <= 20 * 1024 * 1024).slice(0, room);
+
+    if (files.length > room || oversized) {
+      showToast(
+        `Only added what fit — up to ${MAX_REPLY_IMAGES} photos, each under 20MB.`,
+        "error"
+      );
+    }
+
+    if (usable.length === 0) return;
+
+    setReplyMediaFiles((prev) => [...prev, ...usable]);
+    setReplyMediaPreviews((prev) => [
+      ...prev,
+      ...usable.map((f) => URL.createObjectURL(f)),
+    ]);
+  }
+
+  function removeReplyMediaAt(index: number) {
+    URL.revokeObjectURL(replyMediaPreviews[index]);
+    setReplyMediaFiles((prev) => prev.filter((_, i) => i !== index));
+    setReplyMediaPreviews((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function clearReplyMedia() {
+    replyMediaPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setReplyMediaFiles([]);
+    setReplyMediaPreviews([]);
+    if (replyFileInputRef.current) replyFileInputRef.current.value = "";
   }
 
   useEffect(() => {
@@ -126,21 +189,60 @@ export default function PostDetailPage() {
     setPosting(true);
     setError(null);
 
-    const { error } = await supabase.from("comments").insert({
-      post_id: postId,
-      author_id: userId,
-      body: reply,
-    });
+    const { data: newComment, error } = await supabase
+      .from("comments")
+      .insert({
+        post_id: postId,
+        author_id: userId,
+        body: reply,
+      })
+      .select("id")
+      .single();
 
-    setPosting(false);
-
-    if (error) {
-      setError(error.message);
-      showToast(`Reply failed — ${error.message}`, "error");
+    if (error || !newComment) {
+      setPosting(false);
+      const message = error?.message ?? "Something went wrong — please try again.";
+      setError(message);
+      showToast(`Reply failed — ${message}`, "error");
       return;
     }
 
+    if (replyMediaFiles.length > 0) {
+      const mediaRows: { comment_id: string; url: string; position: number }[] = [];
+
+      for (let i = 0; i < replyMediaFiles.length; i++) {
+        const file = replyMediaFiles[i];
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `${userId}/comments/${Date.now()}-${i}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("post-media")
+          .upload(path, file);
+
+        if (uploadError) {
+          setPosting(false);
+          setError(uploadError.message);
+          showToast(`Upload failed — ${uploadError.message}`, "error");
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("post-media")
+          .getPublicUrl(path);
+
+        mediaRows.push({
+          comment_id: newComment.id,
+          url: urlData.publicUrl,
+          position: i,
+        });
+      }
+
+      await supabase.from("comment_media").insert(mediaRows);
+    }
+
+    setPosting(false);
     setReply("");
+    clearReplyMedia();
     showToast("Reply posted!");
     await loadComments();
   }
@@ -297,7 +399,52 @@ export default function PostDetailPage() {
             rows={2}
             className="w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40"
           />
-          <div className="mt-3 flex justify-end">
+
+          {replyMediaPreviews.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {replyMediaPreviews.map((preview, i) => (
+                <div
+                  key={preview}
+                  className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10"
+                >
+                  <img
+                    src={preview}
+                    alt="Selected upload preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeReplyMediaAt(i)}
+                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black text-xs text-white ring-1 ring-white/20"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input
+                ref={replyFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleReplyFileSelect}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => replyFileInputRef.current?.click()}
+                disabled={replyMediaFiles.length >= MAX_REPLY_IMAGES}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-40"
+              >
+                {replyMediaFiles.length > 0
+                  ? `+ Photo (${replyMediaFiles.length}/${MAX_REPLY_IMAGES})`
+                  : "+ Photo"}
+              </button>
+            </div>
             <button
               type="submit"
               disabled={posting || !reply.trim()}
@@ -342,6 +489,7 @@ export default function PostDetailPage() {
               <p className="whitespace-pre-wrap text-sm text-gray-200">
                 {c.body}
               </p>
+              <MediaCarousel media={c.media} />
             </div>
           ))}
         </div>
