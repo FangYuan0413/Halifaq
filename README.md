@@ -114,6 +114,8 @@ A tiny inline script in `<head>` (`app/layout.tsx`) applies whatever theme is ca
 
 Miku's palette is a dark, teal-tinted charcoal (`#12181a` page / `#1c2b29` cards) rather than pure black, keeps the app's existing cyan accents (they already read as "Miku teal"), and swaps hearts/likes to her signature pink (`#ff5fa8`) instead of red. `applyTheme()` also fires a `halifaq-theme-change` window event, which `BackgroundShapes` and `Spinner` listen for so they can swap in their `MikuChibi` bits immediately when you change themes, without a page reload.
 
+A few brand/accent colors (the logo's cyan "Q" and particle burst, the "Halifa" shimmer gradient, the spinner's active segment) were tuned to glow on a dark page and read as almost invisible once Light made the page itself white — these get their own `[data-theme="light"]` overrides in `globals.css` (a darker cyan, a dark-toned gradient, a dark spinner accent) rather than staying pale-on-pale.
+
 ## Design system
 
 Dark theme: black background, white text, `neutral-900` cards with subtle white/10 borders, white-fill or white-outline buttons. Background shapes come from the shared `BackgroundShapes` component — don't rebuild them per-page.

@@ -488,3 +488,26 @@
 .animate-fly-4 {
   animation: fly-4 15s ease-in-out infinite;
 }
+
+/* Light theme fix: a few brand/accent colors were tuned to glow on a dark
+   page (pale cyan, a gray→white→gray shimmer gradient, a white spinner
+   accent) and turned nearly invisible once the page itself went white. */
+[data-theme="light"] .text-cyan-300 {
+  color: #0e7490;
+}
+[data-theme="light"] .bg-cyan-300 {
+  background-color: #0e7490;
+}
+[data-theme="light"] .from-gray-400 {
+  --tw-gradient-from: #52525b;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+[data-theme="light"] .via-white {
+  --tw-gradient-stops: var(--tw-gradient-from), #18181b, var(--tw-gradient-to);
+}
+[data-theme="light"] .to-gray-400 {
+  --tw-gradient-to: #52525b;
+}
+[data-theme="light"] .border-t-white {
+  border-top-color: rgba(0, 0, 0, 0.55);
+}
