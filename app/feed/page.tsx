@@ -38,8 +38,13 @@ import {
   clearSearchHistory,
   SEARCH_HISTORY_VISIBLE_COUNT,
 } from "@/utils/searchHistory";
+import { getVideoDuration } from "@/utils/media";
 
 const MAX_IMAGES = 9;
+const MAX_VIDEO_SIZE_MB = 500;
+const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
+const MAX_VIDEO_DURATION_MINUTES = 30;
+const MAX_VIDEO_DURATION_SECONDS = MAX_VIDEO_DURATION_MINUTES * 60;
 
 type Category = { id: number; name: string; slug: string };
 type Tag = { id: number; name: string };
@@ -260,17 +265,35 @@ export default function FeedPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function handleFileSelect(e: ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
 
     const video = files.find((f) => f.type.startsWith("video"));
 
     if (video) {
-      if (video.size > 50 * 1024 * 1024) {
-        showToast("Upload failed — video is over 50MB.", "error");
+      if (video.size > MAX_VIDEO_SIZE_BYTES) {
+        showToast(
+          `Upload failed — video is over ${MAX_VIDEO_SIZE_MB}MB.`,
+          "error"
+        );
         return;
       }
+
+      try {
+        const duration = await getVideoDuration(video);
+        if (duration > MAX_VIDEO_DURATION_SECONDS) {
+          showToast(
+            `Upload failed — video is longer than ${MAX_VIDEO_DURATION_MINUTES} minutes.`,
+            "error"
+          );
+          return;
+        }
+      } catch {
+        // Couldn't read metadata (unusual codec, etc.) — let the upload
+        // proceed rather than blocking on a check we couldn't run.
+      }
+
       // A video replaces any photos already selected — one or the other.
       mediaPreviews.forEach((url) => URL.revokeObjectURL(url));
       setIsVideo(true);
