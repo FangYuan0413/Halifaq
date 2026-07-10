@@ -21,6 +21,8 @@ import MikuChibi from "@/components/MikuChibi";
 import DailyLifeMikuButton from "@/components/DailyLifeMikuButton";
 import EducationMikuButton from "@/components/EducationMikuButton";
 import EventsMikuButton from "@/components/EventsMikuButton";
+import OnboardingTour from "@/components/OnboardingTour";
+import { resetTourSeen } from "@/utils/tour";
 import { useTheme } from "@/utils/useTheme";
 import { useToast } from "@/components/ToastProvider";
 import {
@@ -631,11 +633,30 @@ export default function FeedPage() {
         <aside className="hidden w-60 shrink-0 flex-col border-r border-white/10 p-6 sm:flex">
           <div className="mb-8 flex items-center justify-between">
             <Logo size="text-2xl" />
-            <InboxIcon />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  resetTourSeen();
+                  window.dispatchEvent(new Event("halifaq-tour-replay"));
+                }}
+                aria-label="Replay tutorial"
+                title="Replay tutorial"
+                className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-xs text-gray-500 hover:bg-white/10 hover:text-gray-300"
+              >
+                ?
+              </button>
+              <span data-tour="inbox">
+                <InboxIcon />
+              </span>
+            </div>
           </div>
 
           {/* Profile info */}
-          <div className="mb-8 rounded-xl border border-white/10 bg-neutral-900 p-3">
+          <div
+            data-tour="profile-box"
+            className="mb-8 rounded-xl border border-white/10 bg-neutral-900 p-3"
+          >
             <Link
               href={userId ? `/profile/${userId}` : "#"}
               className="block hover:opacity-80"
@@ -668,7 +689,7 @@ export default function FeedPage() {
               </button>
             )}
           </div>
-          <nav className="flex flex-col gap-1">
+          <nav data-tour="categories" className="flex flex-col gap-1">
             <button
               onClick={() => setFilterCategoryIds([])}
               className={`rounded-lg px-3 py-2 text-left text-sm transition ${
@@ -706,7 +727,9 @@ export default function FeedPage() {
             <div className="mb-6 flex items-center justify-between sm:hidden">
               <Logo size="text-3xl" />
               <div className="flex items-center gap-3">
-                <InboxIcon />
+                <span data-tour="inbox">
+                  <InboxIcon />
+                </span>
                 <button
                   onClick={handleLogout}
                   className="text-xs font-medium text-gray-500 hover:text-gray-300"
@@ -717,7 +740,7 @@ export default function FeedPage() {
             </div>
 
             {/* All / Following / Hot / For You tabs */}
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div data-tour="feed-tabs" className="mb-4 flex flex-wrap gap-2">
               {(
                 [
                   ["all", "All"],
@@ -741,7 +764,7 @@ export default function FeedPage() {
             </div>
 
             {/* Search bar — focusing it opens a trending-searches dropdown */}
-            <div className="relative mb-6">
+            <div data-tour="search" className="relative mb-6">
               <input
                 type="text"
                 value={searchQuery}
@@ -1005,7 +1028,7 @@ export default function FeedPage() {
             </div>
 
             {/* Category filter pills (mobile only — sidebar covers this on larger screens), multi-select */}
-            <div className="mb-6 flex flex-wrap gap-2 sm:hidden">
+            <div data-tour="categories" className="mb-6 flex flex-wrap gap-2 sm:hidden">
               <button
                 onClick={() => setFilterCategoryIds([])}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition ${
@@ -1047,7 +1070,7 @@ export default function FeedPage() {
                       : "No posts yet — be the first to ask something!"}
               </p>
             ) : (
-              <div className="columns-1 gap-4 sm:columns-2">
+              <div data-tour="posts" className="columns-1 gap-4 sm:columns-2">
                 {visiblePosts.map((post) => (
                   <PostCard
                     key={post.id}
@@ -1068,6 +1091,7 @@ export default function FeedPage() {
 
       {/* Floating "new post" button */}
       <button
+        data-tour="new-post"
         onClick={() => setShowCompose(true)}
         aria-label="New post"
         className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-black text-white ring-1 ring-white/30 shadow-[0_0_25px_rgba(255,255,255,0.45)] transition hover:shadow-[0_0_35px_rgba(255,255,255,0.7)]"
@@ -1225,6 +1249,8 @@ export default function FeedPage() {
           </form>
         </div>
       )}
+
+      {!loadingAuth && <OnboardingTour isAdmin={isAdmin} />}
     </div>
   );
 }

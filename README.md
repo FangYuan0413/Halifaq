@@ -124,6 +124,15 @@ A few brand/accent colors (the logo's cyan "Q" and particle burst, the "Halifa" 
 
 Dark theme: black background, white text, `neutral-900` cards with subtle white/10 borders, white-fill or white-outline buttons. Background shapes come from the shared `BackgroundShapes` component — don't rebuild them per-page.
 
+## Onboarding tour
+
+A first-visit interactive walkthrough on the feed, built from two pieces:
+
+- `utils/tour.ts` — `localStorage` helpers (`hasTourSeen`, `markTourSeen`, `resetTourSeen`), same per-browser pattern as the theme and search-history utils.
+- `components/OnboardingTour.tsx` — the tour engine. Reads a `steps` array (title, body, and an optional CSS selector to spotlight), measures the target element's `getBoundingClientRect()`, and draws a dimmed backdrop with a cut-out "spotlight" ring around it (a transparent box with a `9999px` box-shadow — no SVG mask needed) plus a tooltip card positioned near it. Steps without a target (the welcome card, and a graceful fallback when a target isn't present on the current layout — e.g. the profile box doesn't exist in the mobile header) just show a centered card instead. Has Back/Next/Skip and a step counter; an extra admin-only step is appended for accounts with `is_admin`.
+- Shows automatically once per browser on `/feed` (a beat after the page renders, so target elements exist to measure), and can be replayed any time via the small "?" button next to the logo in the sidebar/mobile header, which fires a `halifaq-tour-replay` window event the tour component listens for.
+- Covers: the category sidebar/pills, search, the All/Following/Hot/For You tabs, liking/replying to posts, the new-post button, the inbox, and the profile box (including a note that Follow/Message live on other people's profile pages, since those aren't visible from the feed itself).
+
 ## Next step
 
 Consider: a "protected route" middleware so pages check auth server-side instead of each client component redirecting after the fact; pagination/infinite scroll once the feed has many posts; notifications when someone replies to or likes your post.
