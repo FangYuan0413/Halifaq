@@ -239,6 +239,17 @@ export default function AuthForm({
             />
           </div>
 
+          {mode === "login" && (
+            <div className="text-right">
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-gray-500 hover:text-gray-300"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
