@@ -710,13 +710,22 @@ export default function FeedPage() {
               ) : theme === "miku" && c.slug === "events" ? (
                 <EventsMikuButton key={c.id} className="my-2 h-10 self-start" />
               ) : (
-                <Link
+                <button
                   key={c.id}
-                  href={`/category/${c.slug}`}
-                  className="rounded-lg px-3 py-2 text-left text-sm text-gray-400 transition hover:bg-white/5"
+                  type="button"
+                  onClick={() =>
+                    setFilterCategoryIds((prev) =>
+                      prev.length === 1 && prev[0] === c.id ? [] : [c.id]
+                    )
+                  }
+                  className={`rounded-lg px-3 py-2 text-left text-sm transition ${
+                    filterCategoryIds.length === 1 && filterCategoryIds[0] === c.id
+                      ? "bg-white text-black"
+                      : "text-gray-400 hover:bg-white/5"
+                  }`}
                 >
                   {c.name}
-                </Link>
+                </button>
               )
             )}
           </nav>
@@ -1049,13 +1058,22 @@ export default function FeedPage() {
                 ) : theme === "miku" && c.slug === "events" ? (
                   <EventsMikuButton key={c.id} className="h-8" />
                 ) : (
-                  <Link
+                  <button
                     key={c.id}
-                    href={`/category/${c.slug}`}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-400"
+                    type="button"
+                    onClick={() =>
+                      setFilterCategoryIds((prev) =>
+                        prev.length === 1 && prev[0] === c.id ? [] : [c.id]
+                      )
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      filterCategoryIds.length === 1 && filterCategoryIds[0] === c.id
+                        ? "border-white bg-white text-black"
+                        : "border-white/10 bg-white/5 text-gray-400"
+                    }`}
                   >
                     {c.name}
-                  </Link>
+                  </button>
                 )
               )}
             </div>
