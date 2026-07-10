@@ -22,6 +22,10 @@ type ProfileInfo = {
   theme: Theme;
 };
 
+// The Miku theme isn't publicly launched yet — it's filtered out of this
+// list for everyone except admins at render time (see the .filter() call
+// below), so regular users only ever see Dark/Light while it's still
+// being polished.
 const THEME_OPTIONS: { value: Theme; label: string; swatchClass: string }[] = [
   { value: "dark", label: "Dark", swatchClass: "bg-black ring-1 ring-white/30" },
   { value: "light", label: "Light", swatchClass: "bg-white ring-1 ring-black/20" },
@@ -431,7 +435,9 @@ export default function ProfilePage() {
               Theme
             </p>
             <div className="flex gap-3">
-              {THEME_OPTIONS.map((opt) => (
+              {THEME_OPTIONS.filter(
+                (opt) => opt.value !== "miku" || profile.is_admin
+              ).map((opt) => (
                 <button
                   key={opt.value}
                   type="button"

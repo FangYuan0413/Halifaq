@@ -109,7 +109,7 @@ An admin's name also carries a small cyan **Admin** badge (`components/AdminBadg
 
 ## Color themes
 
-Three themes — Dark (default), Light, and Miku (Hatsune Miku's signature teal, `#39C5BB`) — picked from a "Theme" section on your own profile page, saved to `profiles.theme`, and applied instantly.
+Three themes — Dark (default), Light, and Miku (Hatsune Miku's signature teal, `#39C5BB`) — picked from a "Theme" section on your own profile page, saved to `profiles.theme`, and applied instantly. **Miku is admin-only for now** — `app/profile/[id]/page.tsx` filters it out of the picker for anyone whose `is_admin` isn't true, so regular users only see Dark/Light until it's ready for a public launch. Remove the `.filter(...)` call around the `THEME_OPTIONS.map(...)` there to open it up to everyone.
 
 Rather than rewriting every component's color classes, alternate themes work by re-targeting the exact compiled Tailwind class names (`bg-black`, `text-white`, `bg-neutral-900`, `border-white/10`, the `text-gray-100`–`600` scale, etc.) underneath a `[data-theme="..."]` selector in `app/globals.css` — see the "Color themes" section there for the full rule set. This keeps every page's actual markup untouched; only the CSS changes. Two things are intentionally left alone in every theme: modal backdrops / overlay buttons that use black at partial opacity (e.g. `bg-black/70`) stay dark regardless of theme, since dimming the background is a theme-agnostic pattern; and the soft glow shadows on cards (the `shadow-[...rgba(255,255,255,...)]` arbitrary values) don't retint, so they're barely visible outside the Dark theme — a minor cosmetic trade-off for not having to touch every file.
 
