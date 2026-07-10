@@ -87,6 +87,7 @@ export default function FeedPage() {
   const [username, setUsername] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasSeenTour, setHasSeenTour] = useState<boolean | null>(null);
   const [pendingWarnings, setPendingWarnings] = useState<Warning[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -179,11 +180,12 @@ export default function FeedPage() {
 
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("username, is_admin")
+        .select("username, is_admin, has_seen_tour")
         .eq("id", user.id)
         .single();
       setUsername(profileData?.username ?? null);
       setIsAdmin(profileData?.is_admin ?? false);
+      setHasSeenTour(profileData?.has_seen_tour ?? false);
 
       const { data: cats } = await supabase
         .from("categories")
@@ -1250,7 +1252,13 @@ export default function FeedPage() {
         </div>
       )}
 
-      {!loadingAuth && <OnboardingTour isAdmin={isAdmin} />}
+      {!loadingAuth && (
+        <OnboardingTour
+          isAdmin={isAdmin}
+          userId={userId}
+          hasSeenTour={hasSeenTour}
+        />
+      )}
     </div>
   );
 }

@@ -49,7 +49,8 @@ insert into public.categories (name, slug) values
   ('Music', 'music'),
   ('Sports', 'sports'),
   ('Tech', 'tech'),
-  ('Politics', 'politics')
+  ('Politics', 'politics'),
+  ('Gaming', 'gaming')
 on conflict (slug) do nothing;
 
 -- 3. Posts

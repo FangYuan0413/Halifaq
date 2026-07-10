@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { hasTourSeen, markTourSeen } from "@/utils/tour";
 
 type Step = {
@@ -62,7 +63,19 @@ const ADMIN_STEP: Step = {
 
 const SPOTLIGHT_PADDING = 8;
 
-export default function OnboardingTour({ isAdmin }: { isAdmin: boolean }) {
+export default function OnboardingTour({
+  isAdmin,
+  userId,
+  hasSeenTour,
+}: {
+  isAdmin: boolean;
+  // Account-level flag from `profiles.has_seen_tour` — the authoritative
+  // source of truth (persists across devices/browsers), so genuinely
+  // returning users never get re-shown the tour just because they're on a
+  // new device. `null` means "still loading, don't decide yet."
+  hasSeenTour: boolean | null;
+  userId: string | null;
+}) {
   const steps = isAdmin ? [...BASE_STEPS, ADMIN_STEP] : BASE_STEPS;
 
   const [visible, setVisible] = useState(false);
@@ -70,15 +83,19 @@ export default function OnboardingTour({ isAdmin }: { isAdmin: boolean }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   // Show the tour once, a beat after the feed has had a chance to render
-  // (so target elements actually exist in the DOM to measure).
+  // (so target elements actually exist in the DOM to measure). Waits for
+  // hasSeenTour to resolve from "loading" (null) before deciding, and
+  // checks both the account flag and the local cache so a flaky network
+  // read doesn't cause a flash for someone who's already seen it.
   useEffect(() => {
-    if (hasTourSeen()) return;
+    if (hasSeenTour === null) return;
+    if (hasSeenTour || hasTourSeen()) return;
     const timeout = setTimeout(() => setVisible(true), 600);
     return () => clearTimeout(timeout);
-  }, []);
+  }, [hasSeenTour]);
 
   // Let other parts of the app (a "Retake tour" button) reopen this same
-  // instance without a page reload.
+  // instance without a page reload, regardless of the seen flags.
   useEffect(() => {
     function handleReplay() {
       setStepIndex(0);
@@ -115,9 +132,17 @@ export default function OnboardingTour({ isAdmin }: { isAdmin: boolean }) {
     };
   }, [visible, measure]);
 
-  function close() {
+  async function close() {
     markTourSeen();
     setVisible(false);
+
+    if (userId) {
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .update({ has_seen_tour: true })
+        .eq("id", userId);
+    }
   }
 
   function next() {
