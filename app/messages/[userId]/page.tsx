@@ -10,6 +10,7 @@ import { useToast } from "@/components/ToastProvider";
 import { formatRelativeTime } from "@/utils/postDisplay";
 
 const MAX_MESSAGES_IF_NOT_FOLLOWED = 3;
+const MESSAGE_MEDIA_URL_TTL_SECONDS = 60 * 60;
 
 type OtherProfile = {
   id: string;
@@ -24,6 +25,7 @@ type Message = {
   recipient_id: string;
   body: string | null;
   media_url: string | null;
+  media_path: string | null;
   media_type: string | null;
   created_at: string;
   read: boolean;
@@ -55,7 +57,7 @@ export default function ConversationPage() {
     const { data, error } = await supabase
       .from("messages")
       .select(
-        "id, sender_id, recipient_id, body, media_url, media_type, created_at, read"
+        "id, sender_id, recipient_id, body, media_url, media_path, media_type, created_at, read"
       )
       .or(
         `and(sender_id.eq.${uid},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${uid})`
@@ -67,7 +69,24 @@ export default function ConversationPage() {
       return;
     }
 
-    setMessages(data ?? []);
+    const hydratedMessages = await Promise.all(
+      (data ?? []).map(async (message) => {
+        if (!message.media_path) return message;
+
+        const { data: signed, error: signedUrlError } = await supabase.storage
+          .from("message-media")
+          .createSignedUrl(message.media_path, MESSAGE_MEDIA_URL_TTL_SECONDS);
+
+        if (signedUrlError) {
+          console.error("createSignedUrl failed", signedUrlError);
+          return { ...message, media_url: null };
+        }
+
+        return { ...message, media_url: signed.signedUrl };
+      })
+    );
+
+    setMessages(hydratedMessages);
 
     const unreadIds = (data ?? [])
       .filter((m) => m.recipient_id === uid && !m.read)
@@ -160,12 +179,12 @@ export default function ConversationPage() {
 
     setSending(true);
 
-    let media_url: string | null = null;
+    let media_path: string | null = null;
     let media_type: string | null = null;
 
     if (mediaFile) {
       const ext = mediaFile.name.split(".").pop() || "bin";
-      const path = `${userId}/${Date.now()}.${ext}`;
+      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("message-media")
@@ -177,10 +196,7 @@ export default function ConversationPage() {
         return;
       }
 
-      const { data: urlData } = supabase.storage
-        .from("message-media")
-        .getPublicUrl(path);
-      media_url = urlData.publicUrl;
+      media_path = path;
       media_type = isVideo ? "video" : "image";
     }
 
@@ -188,13 +204,17 @@ export default function ConversationPage() {
       sender_id: userId,
       recipient_id: otherUserId,
       body: text.trim() || null,
-      media_url,
+      media_path,
+      media_url: null,
       media_type,
     });
 
     setSending(false);
 
     if (error) {
+      if (media_path) {
+        await supabase.storage.from("message-media").remove([media_path]);
+      }
       showToast(`Couldn't send — ${error.message}`, "error");
       return;
     }
