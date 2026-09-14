@@ -1,0 +1,188 @@
+/* HalifaQ Miku theme refresh — intentionally loaded after globals.css. */
+html[data-theme="miku"] {
+  color-scheme: light;
+  background: #eefbfe;
+}
+
+html[data-theme="miku"] body {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(92, 203, 219, 0.20), transparent 28rem),
+    radial-gradient(circle at 88% 18%, rgba(133, 224, 232, 0.16), transparent 24rem),
+    linear-gradient(180deg, #f9feff 0%, #f1fbfd 48%, #e8f8fb 100%);
+  color: #183746;
+}
+
+html[data-theme="miku"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.78;
+  background:
+    radial-gradient(ellipse at 14% 96%, transparent 0 34%, rgba(77,186,204,.10) 34.3% 34.8%, transparent 35.1% 42%, rgba(77,186,204,.07) 42.3% 42.7%, transparent 43%),
+    radial-gradient(ellipse at 80% -8%, transparent 0 37%, rgba(77,186,204,.08) 37.2% 37.6%, transparent 38%);
+}
+
+/* Remove the previous flying-chibi background treatment. */
+html[data-theme="miku"] .animate-fly-1,
+html[data-theme="miku"] .animate-fly-2,
+html[data-theme="miku"] .animate-fly-3,
+html[data-theme="miku"] .animate-fly-4 {
+  display: none !important;
+}
+
+/* Light, glassy core palette. */
+html[data-theme="miku"] .bg-black,
+html[data-theme="miku"] .hover\:bg-black:hover {
+  background-color: transparent;
+}
+
+html[data-theme="miku"] .bg-neutral-900 {
+  background-color: rgba(255,255,255,.82);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 34px rgba(45,139,158,.08);
+}
+
+html[data-theme="miku"] .bg-neutral-900\/95 {
+  background-color: rgba(250,255,255,.94);
+  backdrop-filter: blur(18px);
+}
+
+html[data-theme="miku"] .text-white { color: #173747; }
+html[data-theme="miku"] .text-black { color: #fff; }
+html[data-theme="miku"] .bg-white { background-color: #2aa8ba; }
+
+html[data-theme="miku"] .border-white\/10 { border-color: rgba(54,157,177,.17); }
+html[data-theme="miku"] .border-white\/20,
+html[data-theme="miku"] .hover\:border-white\/25:hover { border-color: rgba(41,156,177,.30); }
+html[data-theme="miku"] .focus\:border-white\/40:focus { border-color: rgba(31,151,173,.55); }
+
+html[data-theme="miku"] .bg-white\/5 { background-color: rgba(255,255,255,.56); }
+html[data-theme="miku"] .bg-white\/10,
+html[data-theme="miku"] .hover\:bg-white\/10:hover { background-color: rgba(56,182,199,.10); }
+html[data-theme="miku"] .hover\:bg-white\/5:hover { background-color: rgba(56,182,199,.075); }
+html[data-theme="miku"] .hover\:bg-white\/20:hover { background-color: rgba(56,182,199,.16); }
+
+html[data-theme="miku"] .ring-white\/20 { --tw-ring-color: rgba(45,157,177,.24); }
+html[data-theme="miku"] .ring-white\/30 { --tw-ring-color: rgba(45,157,177,.34); }
+html[data-theme="miku"] .focus\:ring-white\/40:focus { --tw-ring-color: rgba(38,156,176,.48); }
+
+html[data-theme="miku"] .text-gray-100 { color: #173747; }
+html[data-theme="miku"] .text-gray-200 { color: #294b5a; }
+html[data-theme="miku"] .text-gray-300,
+html[data-theme="miku"] .hover\:text-gray-300:hover { color: #416272; }
+html[data-theme="miku"] .text-gray-400 { color: #5c7886; }
+html[data-theme="miku"] .text-gray-500 { color: #78909b; }
+html[data-theme="miku"] .text-gray-600 { color: #9aadb5; }
+html[data-theme="miku"] .placeholder\:text-gray-600::placeholder { color: #9ab2bc; }
+html[data-theme="miku"] .hover\:text-white:hover { color: #0c7180; }
+
+html[data-theme="miku"] .text-red-400,
+html[data-theme="miku"] .hover\:text-red-400:hover { color: #e65e92; }
+
+/* Form surfaces in the light Miku theme. */
+html[data-theme="miku"] input.bg-black\/40,
+html[data-theme="miku"] textarea.bg-black\/40 {
+  background-color: rgba(235,249,252,.88);
+  color: #173747;
+}
+
+/* Wordmark: darker script + restrained teal instead of neon. */
+html[data-theme="miku"] .animate-text-shimmer {
+  background-image: linear-gradient(90deg, #50717e, #173747, #39b8c8, #173747, #50717e);
+}
+html[data-theme="miku"] .text-cyan-300 { color: #219daf; }
+html[data-theme="miku"] .bg-cyan-300 { background-color: #219daf; }
+html[data-theme="miku"] .animate-pulse-glow {
+  filter: drop-shadow(0 4px 11px rgba(40,164,184,.16));
+  animation: none;
+}
+
+/* Every category button gets delicate AI-generated Miku artwork. */
+html[data-theme="miku"] [data-tour="categories"] { gap: .42rem; }
+
+html[data-theme="miku"] [data-tour="categories"] > * {
+  position: relative !important;
+  isolation: isolate;
+  display: flex !important;
+  width: 100% !important;
+  height: 2.85rem !important;
+  min-height: 2.85rem !important;
+  margin: 0 !important;
+  padding: 0 5.2rem 0 .9rem !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(66,171,190,.18) !important;
+  border-radius: .9rem !important;
+  background-color: rgba(255,255,255,.68) !important;
+  background-repeat: no-repeat !important;
+  background-position: right -.25rem center !important;
+  background-size: auto 112% !important;
+  color: #355869 !important;
+  text-align: left !important;
+  font-weight: 500 !important;
+  box-shadow: 0 5px 16px rgba(48,144,161,.045);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease !important;
+  aspect-ratio: auto !important;
+}
+
+html[data-theme="miku"] [data-tour="categories"] > *:nth-child(odd) {
+  background-image: url("/miku-theme/category-a.webp") !important;
+}
+html[data-theme="miku"] [data-tour="categories"] > *:nth-child(even) {
+  background-image: url("/miku-theme/category-b.webp") !important;
+}
+
+html[data-theme="miku"] [data-tour="categories"] > *::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(255,255,255,.98) 0%, rgba(247,253,254,.94) 54%, rgba(230,248,251,.46) 79%, rgba(230,248,251,.05) 100%);
+}
+
+html[data-theme="miku"] [data-tour="categories"] > *:hover {
+  transform: translateX(2px);
+  border-color: rgba(45,169,189,.38) !important;
+  box-shadow: 0 7px 20px rgba(43,150,169,.09);
+}
+
+html[data-theme="miku"] [data-tour="categories"] > .bg-white {
+  color: #086d7c !important;
+  border-color: rgba(37,162,183,.48) !important;
+  box-shadow: inset 3px 0 0 #2aa8ba, 0 8px 21px rgba(43,150,169,.10);
+}
+
+/* Hide the old one-off Miku button art; keep only its label. */
+html[data-theme="miku"] [data-tour="categories"] > * > img,
+html[data-theme="miku"] [data-tour="categories"] > * > span > img { display: none !important; }
+
+html[data-theme="miku"] [data-tour="categories"] > * > span {
+  position: relative !important;
+  z-index: 2 !important;
+  color: inherit !important;
+  font-size: .875rem !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+/* Glass-card polish throughout the theme. */
+html[data-theme="miku"] a.rounded-2xl,
+html[data-theme="miku"] div.rounded-2xl,
+html[data-theme="miku"] form.rounded-2xl {
+  border-color: rgba(55,163,183,.16);
+}
+
+html[data-theme="miku"] button.bg-white:hover,
+html[data-theme="miku"] a.bg-white:hover { background-color: #2296a8; }
+
+html[data-theme="miku"] ::selection {
+  background: rgba(42,168,186,.24);
+  color: #123442;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="miku"] [data-tour="categories"] > * { transition: none !important; }
+}
