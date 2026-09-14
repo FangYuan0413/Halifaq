@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import BackgroundShapes from "@/components/BackgroundShapes";
+import LandingBackground from "@/components/LandingBackground";
 import Logo from "@/components/Logo";
 import { createClient } from "@/utils/supabase/client";
 
@@ -25,14 +25,10 @@ export default function LandingPage() {
           : (errorDescription?.replace(/\+/g, " ") ??
               "That link is no longer valid.")
       );
-      // Clean the error params out of the address bar.
       window.history.replaceState({}, "", window.location.pathname);
       return;
     }
 
-    // A successful email confirmation redirect includes auth tokens in the
-    // URL hash (#access_token=...&type=signup...). The Supabase client
-    // parses that automatically on load, so we just check for a session.
     if (window.location.hash.includes("access_token")) {
       const supabase = createClient();
       supabase.auth.getSession().then(({ data }) => {
@@ -46,9 +42,9 @@ export default function LandingPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4">
-      <BackgroundShapes />
+      <LandingBackground />
 
-      <div className="relative z-10 flex flex-col items-center text-center">
+      <div className="relative z-10 flex max-w-xl flex-col items-center text-center">
         {confirmStatus === "success" && (
           <div className="mb-6 max-w-sm rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm text-white">
             Account confirmed — you&apos;re all set. Log in to continue.
@@ -60,26 +56,37 @@ export default function LandingPage() {
           </div>
         )}
 
-        <Logo size="text-5xl sm:text-6xl" />
-        <p className="mt-4 max-w-sm text-base text-gray-400">
+        <div className="relative">
+          <div
+            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-40 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(8,127,149,0.12)_0%,rgba(8,127,149,0.04)_42%,transparent_72%)] blur-2xl"
+            aria-hidden="true"
+          />
+          <Logo size="text-5xl sm:text-6xl" />
+        </div>
+
+        <p className="mt-5 max-w-md text-base leading-7 text-gray-400">
           Ask anything about life in Halifax. Answered by people who actually
           live it.
         </p>
 
-        <div className="mt-10 flex items-center gap-3">
+        <div className="mt-9 flex items-center gap-3">
           <Link
             href="/login"
-            className="rounded-full border border-white/20 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+            className="rounded-full border border-white/20 px-6 py-2.5 text-sm font-medium text-white transition hover:border-[#087F95]/45 hover:bg-[#087F95]/5"
           >
             Log in
           </Link>
           <Link
             href="/signup"
-            className="rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition hover:opacity-90"
+            className="rounded-full bg-[#087F95] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(8,127,149,0.14)] transition hover:bg-[#076f82]"
           >
             Sign up
           </Link>
         </div>
+
+        <p className="mt-5 text-xs tracking-wide text-gray-600">
+          Local questions. Local answers. Halifax community.
+        </p>
       </div>
     </main>
   );
