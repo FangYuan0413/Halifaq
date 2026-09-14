@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Theme, THEME_CHANGE_EVENT, getCurrentTheme } from "@/utils/theme";
 
 function Base64Panel({
@@ -124,10 +125,11 @@ function MikuReferenceShell() {
 }
 
 // Shared decorative background. The regular themes use abstract floating
-// shapes. Miku uses the approved Halifax × Miku dashboard artwork as a fixed
-// layout shell, while the real feed remains live and interactive on top.
+// shapes. On the feed, Miku uses the approved three-column reference shell.
+// Other Miku pages keep a quiet aqua background without the dashboard chrome.
 export default function BackgroundShapes() {
   const [theme, setTheme] = useState<Theme>("dark");
+  const pathname = usePathname();
 
   useEffect(() => {
     setTheme(getCurrentTheme());
@@ -141,7 +143,15 @@ export default function BackgroundShapes() {
     return () => window.removeEventListener(THEME_CHANGE_EVENT, onThemeChange);
   }, []);
 
-  if (theme === "miku") return <MikuReferenceShell />;
+  if (theme === "miku") {
+    if (pathname === "/feed") return <MikuReferenceShell />;
+    return (
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_20%_10%,rgba(103,211,226,0.12),transparent_28rem),radial-gradient(circle_at_85%_80%,rgba(57,197,187,0.09),transparent_30rem)]"
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
