@@ -1,0 +1,1 @@
+Reference-image crops in this folder are derived from the user-approved Miku/Halifax mockup and used only by the Miku theme.
