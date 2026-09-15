@@ -41,6 +41,7 @@ export default function ConversationPage() {
   const [otherProfile, setOtherProfile] = useState<OtherProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [iFollowOther, setIFollowOther] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
 
   const [text, setText] = useState("");
@@ -55,25 +56,30 @@ export default function ConversationPage() {
     const { data, error } = await supabase
       .from("messages")
       .select(
-        "id, sender_id, recipient_id, body, media_url, media_type, created_at, read"
+        "id, sender_id, recipient_id, body, media_url, media_type, created_at, read",
       )
       .or(
-        `and(sender_id.eq.${uid},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${uid})`
+        `and(sender_id.eq.${uid},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${uid})`,
       )
       .order("created_at", { ascending: true });
 
     if (error) {
+      setLoadError("Could not load this conversation. Please retry.");
       console.error("loadMessages failed", error);
       return;
     }
 
+    setLoadError(null);
     setMessages(data ?? []);
 
     const unreadIds = (data ?? [])
       .filter((m) => m.recipient_id === uid && !m.read)
       .map((m) => m.id);
     if (unreadIds.length > 0) {
-      await supabase.from("messages").update({ read: true }).in("id", unreadIds);
+      await supabase
+        .from("messages")
+        .update({ read: true })
+        .in("id", unreadIds);
     }
   }
 
@@ -120,7 +126,21 @@ export default function ConversationPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages]);
+  }, [messages.length]);
+
+  useEffect(() => {
+    if (!userId || notFound) return;
+    const refresh = () => {
+      if (!document.hidden) void loadMessages(userId);
+    };
+    const timer = window.setInterval(refresh, 5000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, otherUserId, notFound]);
 
   function clearMedia() {
     if (mediaPreview) URL.revokeObjectURL(mediaPreview);
@@ -139,7 +159,7 @@ export default function ConversationPage() {
     if (file.size > maxSize) {
       showToast(
         `Upload failed — file is over ${video ? "50MB" : "20MB"}.`,
-        "error"
+        "error",
       );
       return;
     }
@@ -151,7 +171,8 @@ export default function ConversationPage() {
   }
 
   const mySentCount = messages.filter((m) => m.sender_id === userId).length;
-  const limitReached = !iFollowOther && mySentCount >= MAX_MESSAGES_IF_NOT_FOLLOWED;
+  const limitReached =
+    !iFollowOther && mySentCount >= MAX_MESSAGES_IF_NOT_FOLLOWED;
 
   async function handleSend(e: FormEvent) {
     e.preventDefault();
@@ -259,6 +280,17 @@ export default function ConversationPage() {
           </span>
         </Link>
 
+        {loadError && (
+          <p role="alert" className="mb-4 text-sm text-red-400">
+            {loadError}{" "}
+            <button
+              className="underline"
+              onClick={() => userId && loadMessages(userId)}
+            >
+              Retry
+            </button>
+          </p>
+        )}
         <div className="flex-1 space-y-2 overflow-y-auto pb-4">
           {messages.length === 0 ? (
             <p className="mt-8 text-center text-sm text-gray-500">
@@ -293,9 +325,7 @@ export default function ConversationPage() {
                           className="mb-1 max-h-64 w-full rounded-lg object-cover"
                         />
                       ))}
-                    {m.body && (
-                      <p className="whitespace-pre-wrap">{m.body}</p>
-                    )}
+                    {m.body && <p className="whitespace-pre-wrap">{m.body}</p>}
                     <p
                       className={`mt-1 text-[10px] ${
                         mine ? "text-gray-600" : "text-gray-500"
@@ -313,9 +343,9 @@ export default function ConversationPage() {
 
         {limitReached && (
           <p className="mb-2 text-center text-xs text-amber-400">
-            You&apos;ve sent {MAX_MESSAGES_IF_NOT_FOLLOWED} messages and{" "}
-            {otherProfile?.username ?? "this user"} doesn&apos;t follow you
-            yet — they&apos;ll need to follow you back before you can send more.
+            You&apos;ve sent {MAX_MESSAGES_IF_NOT_FOLLOWED} messages and you
+            don&apos;t follow {otherProfile?.username ?? "this user"}
+            yet — follow them from their profile to continue.
           </p>
         )}
 
@@ -326,7 +356,10 @@ export default function ConversationPage() {
           {mediaPreview && (
             <div className="relative mb-2 inline-block h-20 w-20 overflow-hidden rounded-lg border border-white/10">
               {isVideo ? (
-                <video src={mediaPreview} className="h-full w-full object-cover" />
+                <video
+                  src={mediaPreview}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <img
                   src={mediaPreview}

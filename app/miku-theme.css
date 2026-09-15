@@ -118,8 +118,8 @@ html[data-theme="miku"] [data-tour="categories"] > * {
   border-radius: .9rem !important;
   background-color: rgba(255,255,255,.68) !important;
   background-repeat: no-repeat !important;
-  background-position: right -.25rem center !important;
-  background-size: auto 112% !important;
+  background-position: right bottom !important;
+  background-size: auto 100% !important;
   color: #355869 !important;
   text-align: left !important;
   font-weight: 500 !important;
@@ -129,10 +129,10 @@ html[data-theme="miku"] [data-tour="categories"] > * {
 }
 
 html[data-theme="miku"] [data-tour="categories"] > *:nth-child(odd) {
-  background-image: url("/miku-theme/category-a.webp") !important;
+  background-image: url("/miku-theme/portrait-hd.png") !important;
 }
 html[data-theme="miku"] [data-tour="categories"] > *:nth-child(even) {
-  background-image: url("/miku-theme/category-b.webp") !important;
+  background-image: url("/miku-theme/portrait-hd.png") !important;
 }
 
 html[data-theme="miku"] [data-tour="categories"] > *::after {

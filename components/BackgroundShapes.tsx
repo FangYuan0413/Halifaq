@@ -1,135 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Theme, THEME_CHANGE_EVENT, getCurrentTheme } from "@/utils/theme";
-
-function Base64Panel({
-  source,
-  className = "",
-  alt = "",
-}: {
-  source: string;
-  className?: string;
-  alt?: string;
-}) {
-  const [src, setSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(source)
-      .then((r) => (r.ok ? r.text() : Promise.reject(new Error("asset load failed"))))
-      .then((base64) => {
-        if (!cancelled) setSrc(`data:image/webp;base64,${base64.trim()}`);
-      })
-      .catch(() => {
-        if (!cancelled) setSrc(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source]);
-
-  if (!src) return <div className={className} aria-hidden="true" />;
-  return <img src={src} alt={alt} className={className} draggable={false} />;
-}
-
-function MikuReferenceShell() {
-  const openComposer = () => {
-    document
-      .querySelector<HTMLButtonElement>('[data-tour="new-post"]')
-      ?.click();
-  };
-
-  const rightCategories = [
-    ["/category/visa-immigration", "Visa & Immigration"],
-    ["/category/housing", "Housing"],
-    ["/category/education", "Education"],
-    ["/category/jobs-work", "Jobs & Work"],
-    ["/category/daily-life", "Daily Life"],
-    ["/category/food", "Food"],
-    ["/category/transportation", "Transportation"],
-    ["/category/events", "Events"],
-    ["/category/gaming", "Gaming"],
-    ["/feed", "All Categories"],
-  ] as const;
-
-  return (
-    <div className="miku-reference-shell" aria-hidden="false">
-      <aside className="miku-reference-left" aria-label="Miku navigation artwork">
-        <Base64Panel
-          source="/miku-theme/reference-left-top.b64.txt"
-          className="miku-reference-left-top"
-        />
-        <Base64Panel
-          source="/miku-theme/reference-left-lower.b64.txt"
-          className="miku-reference-left-lower"
-        />
-        <nav className="miku-reference-left-links" aria-label="Main navigation">
-          <a href="/feed" style={{ top: "16.5%" }} aria-label="Home" />
-          <a href="/search" style={{ top: "24.0%" }} aria-label="Explore" />
-          <a href="#miku-popular-categories" style={{ top: "31.5%" }} aria-label="Categories" />
-          <a href="/messages" style={{ top: "47.0%" }} aria-label="Messages" />
-          <a href="/messages" style={{ top: "55.0%" }} aria-label="Bookmarks" />
-        </nav>
-      </aside>
-
-      <Base64Panel
-        source="/miku-theme/reference-hero.b64.txt"
-        className="miku-reference-hero"
-        alt="Hatsune Miku and Halifax harbour"
-      />
-
-      <button
-        type="button"
-        onClick={openComposer}
-        className="miku-reference-composer"
-        aria-label="Create a new post"
-      >
-        <span className="miku-reference-composer-avatar">♪</span>
-        <span className="miku-reference-composer-placeholder">
-          What would you like to ask or share?
-        </span>
-        <span className="miku-reference-composer-tools">Text　Photo　Link　Poll</span>
-        <span className="miku-reference-composer-post">Post</span>
-      </button>
-
-      <aside className="miku-reference-right" aria-label="Miku community sidebar">
-        <Base64Panel
-          source="/miku-theme/reference-right-top.b64.txt"
-          className="miku-reference-right-top"
-        />
-        <div id="miku-popular-categories" className="miku-reference-categories-wrap">
-          <Base64Panel
-            source="/miku-theme/reference-right-categories.b64.txt"
-            className="miku-reference-right-categories"
-          />
-          <nav className="miku-reference-category-links" aria-label="Popular categories">
-            {rightCategories.map(([href, label], i) => (
-              <a
-                key={`${href}-${i}`}
-                href={href}
-                aria-label={label}
-                style={{ top: `${52 + i * 47}px` }}
-              />
-            ))}
-          </nav>
-        </div>
-        <Base64Panel
-          source="/miku-theme/reference-right-quote.b64.txt"
-          className="miku-reference-right-quote"
-        />
-      </aside>
-    </div>
-  );
-}
 
 // Shared decorative background. The regular themes use abstract floating
 // shapes. On the feed, Miku uses the approved three-column reference shell.
 // Other Miku pages keep a quiet aqua background without the dashboard chrome.
 export default function BackgroundShapes() {
   const [theme, setTheme] = useState<Theme>("dark");
-  const pathname = usePathname();
 
   useEffect(() => {
     setTheme(getCurrentTheme());
@@ -144,7 +22,6 @@ export default function BackgroundShapes() {
   }, []);
 
   if (theme === "miku") {
-    if (pathname === "/feed") return <MikuReferenceShell />;
     return (
       <div
         className="pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_20%_10%,rgba(103,211,226,0.12),transparent_28rem),radial-gradient(circle_at_85%_80%,rgba(57,197,187,0.09),transparent_30rem)]"
@@ -166,7 +43,14 @@ export default function BackgroundShapes() {
         className="bg-shape animate-float-2 absolute right-10 top-1/4 h-32 w-32 opacity-20 blur-sm"
         viewBox="0 0 100 100"
       >
-        <rect x="20" y="20" width="60" height="60" fill="white" transform="rotate(45 50 50)" />
+        <rect
+          x="20"
+          y="20"
+          width="60"
+          height="60"
+          fill="white"
+          transform="rotate(45 50 50)"
+        />
       </svg>
 
       <svg
