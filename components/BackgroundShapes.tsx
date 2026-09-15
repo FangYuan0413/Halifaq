@@ -1,15 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import MikuChibi from "./MikuChibi";
 import { Theme, THEME_CHANGE_EVENT, getCurrentTheme } from "@/utils/theme";
 
-// Shared decorative background. On the Dark/Light themes: soft glowing
-// triangles, squares, and circles drifting slowly. On the Miku theme: a few
-// chibi Mikus flying past instead, since a plain recolor of abstract shapes
-// doesn't really read as "Miku" the way an actual little face does.
-// Drop this as the first child inside a `relative overflow-hidden` wrapper,
-// and give your real content `relative z-10` so it stays above these shapes.
+// Shared decorative background. The regular themes use abstract floating
+// shapes. On the feed, Miku uses the approved three-column reference shell.
+// Other Miku pages keep a quiet aqua background without the dashboard chrome.
 export default function BackgroundShapes() {
   const [theme, setTheme] = useState<Theme>("dark");
 
@@ -27,18 +23,10 @@ export default function BackgroundShapes() {
 
   if (theme === "miku") {
     return (
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <MikuChibi className="animate-fly-1 absolute -left-16 top-12 h-20 w-20 opacity-70" />
-        <MikuChibi
-          className="animate-fly-2 absolute -right-14 top-1/3 h-16 w-16 opacity-60"
-          hairColor="#2fb0a7"
-        />
-        <MikuChibi className="animate-fly-3 absolute -left-10 bottom-24 h-14 w-14 opacity-50" />
-        <MikuChibi
-          className="animate-fly-4 absolute -right-12 bottom-10 h-24 w-24 opacity-40"
-          hairColor="#57d6cc"
-        />
-      </div>
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_20%_10%,rgba(103,211,226,0.12),transparent_28rem),radial-gradient(circle_at_85%_80%,rgba(57,197,187,0.09),transparent_30rem)]"
+        aria-hidden="true"
+      />
     );
   }
 
@@ -55,7 +43,14 @@ export default function BackgroundShapes() {
         className="bg-shape animate-float-2 absolute right-10 top-1/4 h-32 w-32 opacity-20 blur-sm"
         viewBox="0 0 100 100"
       >
-        <rect x="20" y="20" width="60" height="60" fill="white" transform="rotate(45 50 50)" />
+        <rect
+          x="20"
+          y="20"
+          width="60"
+          height="60"
+          fill="white"
+          transform="rotate(45 50 50)"
+        />
       </svg>
 
       <svg

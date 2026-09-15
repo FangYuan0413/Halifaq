@@ -50,6 +50,13 @@ export default function MessagesPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("chats");
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingInbox, setLoadingInbox] = useState(true);
+  const [newChat, setNewChat] = useState(false);
+  const [peopleQuery, setPeopleQuery] = useState("");
+  const [people, setPeople] = useState<{ id: string; username: string }[]>([]);
+  const [peopleLoading, setPeopleLoading] = useState(false);
+  const [peopleError, setPeopleError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [likeGroups, setLikeGroups] = useState<LikeGroup[]>([]);
   const [replies, setReplies] = useState<ReplyItem[]>([]);
@@ -62,10 +69,12 @@ export default function MessagesPage() {
       .order("created_at", { ascending: false });
 
     if (error || !data) {
+      setLoadError("Could not load conversations. Please retry.");
       console.error("loadConversations failed", error);
       return;
     }
 
+    setLoadError(null);
     const byOther = new Map<
       string,
       { lastMessage: string; lastMessageAt: string; unread: boolean }
@@ -107,7 +116,7 @@ export default function MessagesPage() {
       .in("id", otherIds);
 
     const profileById = new Map(
-      (profilesData ?? []).map((p) => [p.id, p as Profile])
+      (profilesData ?? []).map((p) => [p.id, p as Profile]),
     );
 
     const list: Conversation[] = otherIds.map((otherUserId) => {
@@ -123,7 +132,8 @@ export default function MessagesPage() {
 
     list.sort(
       (a, b) =>
-        new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+        new Date(b.lastMessageAt).getTime() -
+        new Date(a.lastMessageAt).getTime(),
     );
     setConversations(list);
   }
@@ -182,10 +192,10 @@ export default function MessagesPage() {
         firstLiker: g.firstLiker,
         totalLikers: g.totalLikers,
         latestAt: g.latestAt,
-      })
+      }),
     );
     list.sort(
-      (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime()
+      (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
     );
     setLikeGroups(list);
   }
@@ -210,14 +220,15 @@ export default function MessagesPage() {
     }
 
     const orParts: string[] = [];
-    if (myPostIds.length > 0) orParts.push(`post_id.in.(${myPostIds.join(",")})`);
+    if (myPostIds.length > 0)
+      orParts.push(`post_id.in.(${myPostIds.join(",")})`);
     if (myCommentIds.length > 0)
       orParts.push(`parent_comment_id.in.(${myCommentIds.join(",")})`);
 
     const { data, error } = await supabase
       .from("comments")
       .select(
-        "id, body, created_at, post_id, profiles(username, avatar_url, is_admin)"
+        "id, body, created_at, post_id, profiles(username, avatar_url, is_admin)",
       )
       .neq("author_id", uid)
       .or(orParts.join(","))
@@ -259,6 +270,13 @@ export default function MessagesPage() {
         return;
       }
 
+      const requestedTab = new URLSearchParams(window.location.search).get(
+        "tab",
+      );
+      if (requestedTab === "replies" || requestedTab === "likes") {
+        setTab(requestedTab);
+        markActivitySeen(supabase, user.id);
+      }
       setUserId(user.id);
       setLoadingAuth(false);
 
@@ -267,11 +285,60 @@ export default function MessagesPage() {
         loadLikes(user.id),
         loadReplies(user.id),
       ]);
+      setLoadingInbox(false);
     }
 
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!newChat || !userId || peopleQuery.trim().length < 2) {
+      setPeople([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPeopleLoading(true);
+      setPeopleError(null);
+      const term = peopleQuery.trim().replace(/[\\%_]/g, "");
+      if (term.length < 2) {
+        setPeople([]);
+        setPeopleLoading(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .ilike("username", `%${term}%`)
+        .neq("id", userId)
+        .limit(12);
+      if (!cancelled) {
+        setPeople(data ?? []);
+        setPeopleLoading(false);
+        if (error) setPeopleError("Could not search people. Please try again.");
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newChat, peopleQuery, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = () => {
+      if (!document.hidden) void loadConversations(userId);
+    };
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   function selectTab(next: Tab) {
     setTab(next);
@@ -291,7 +358,6 @@ export default function MessagesPage() {
   const tabs: [Tab, string][] = [
     ["chats", "Chats"],
     ["replies", "Replies"],
-    ["mentions", "Mentions"],
     ["likes", "Likes"],
   ];
 
@@ -307,7 +373,80 @@ export default function MessagesPage() {
           &larr; Back to feed
         </Link>
 
-        <h1 className="mb-4 text-2xl font-bold text-white">Messages</h1>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Messages</h1>
+          <button
+            className="rounded-full bg-white px-4 py-2 text-sm text-black"
+            onClick={() => setNewChat(!newChat)}
+          >
+            {newChat ? "Close search" : "New message"}
+          </button>
+        </div>
+        {newChat && (
+          <section
+            className="mb-5 rounded-2xl border border-white/10 bg-neutral-900 p-4"
+            aria-label="Start a conversation"
+          >
+            <label htmlFor="chat-person" className="text-sm text-gray-300">
+              Find someone by username
+            </label>
+            <input
+              id="chat-person"
+              autoFocus
+              value={peopleQuery}
+              onChange={(e) => setPeopleQuery(e.target.value)}
+              placeholder="Type at least 2 characters"
+              className="my-3 w-full rounded-xl border border-white/10 bg-black/40 p-3 text-white"
+            />
+            {peopleError && (
+              <p role="alert" className="text-sm text-red-400">
+                {peopleError}
+              </p>
+            )}
+            {peopleLoading ? (
+              <p className="text-sm text-gray-400">Searching…</p>
+            ) : (
+              people.map((p) => (
+                <Link
+                  className="block rounded-lg p-3 text-sm text-white hover:bg-white/10"
+                  key={p.id}
+                  href={`/messages/${p.id}`}
+                >
+                  {p.username} →
+                </Link>
+              ))
+            )}
+            {peopleQuery.trim().length >= 2 &&
+              !peopleLoading &&
+              !peopleError &&
+              people.length === 0 && (
+                <p className="text-sm text-gray-400">No matching people.</p>
+              )}
+          </section>
+        )}
+        {loadError && (
+          <div role="alert" className="mb-4 text-sm text-red-400">
+            {loadError}{" "}
+            <button
+              className="underline"
+              onClick={async () => {
+                if (userId) {
+                  setLoadError(null);
+                  setLoadingInbox(true);
+                  await loadConversations(userId);
+                  setLoadingInbox(false);
+                }
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {loadingInbox && (
+          <p role="status" className="mb-4 text-sm text-gray-400">
+            Loading your inbox…
+          </p>
+        )}
 
         <div className="mb-6 flex gap-2 border-b border-white/10 pb-3">
           {tabs.map(([key, label]) => (
@@ -325,7 +464,7 @@ export default function MessagesPage() {
           ))}
         </div>
 
-        {tab === "chats" && (
+        {tab === "chats" && !loadingInbox && !loadError && (
           <div className="space-y-2">
             {conversations.length === 0 ? (
               <p className="text-center text-sm text-gray-500">
@@ -359,7 +498,9 @@ export default function MessagesPage() {
                     </div>
                     <p
                       className={`truncate text-xs ${
-                        c.unread ? "font-semibold text-gray-200" : "text-gray-500"
+                        c.unread
+                          ? "font-semibold text-gray-200"
+                          : "text-gray-500"
                       }`}
                     >
                       {c.lastMessage}
@@ -383,8 +524,8 @@ export default function MessagesPage() {
           <div className="space-y-2">
             {likeGroups.length === 0 ? (
               <p className="text-center text-sm text-gray-500">
-                No likes yet — once someone likes your posts, they&apos;ll show up
-                here.
+                No likes yet — once someone likes your posts, they&apos;ll show
+                up here.
               </p>
             ) : (
               likeGroups.map((g) => (
@@ -401,7 +542,9 @@ export default function MessagesPage() {
                     />
                   ) : (
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
-                      {(g.firstLiker?.username ?? "?").slice(0, 1).toUpperCase()}
+                      {(g.firstLiker?.username ?? "?")
+                        .slice(0, 1)
+                        .toUpperCase()}
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
@@ -432,8 +575,8 @@ export default function MessagesPage() {
           <div className="space-y-2">
             {replies.length === 0 ? (
               <p className="text-center text-sm text-gray-500">
-                No replies yet — replies to your posts or comments will show
-                up here.
+                No replies yet — replies to your posts or comments will show up
+                here.
               </p>
             ) : (
               replies.map((r) => (
@@ -472,12 +615,6 @@ export default function MessagesPage() {
               ))
             )}
           </div>
-        )}
-
-        {tab === "mentions" && (
-          <p className="text-center text-sm text-gray-500">
-            @mentions aren&apos;t tracked yet — coming later.
-          </p>
         )}
       </div>
     </main>

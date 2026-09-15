@@ -12,6 +12,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import BackgroundShapes from "@/components/BackgroundShapes";
+import {
+  MikuNavigation,
+  MikuHero,
+  MikuComposer,
+  MikuCategories,
+} from "@/components/MikuDashboard";
+import { useBookmarks } from "@/utils/bookmarks";
 import Logo from "@/components/Logo";
 import { MediaItem } from "@/components/MediaCarousel";
 import PostCard from "@/components/PostCard";
@@ -59,7 +66,11 @@ type Post = {
   media: MediaItem[];
   views: number;
   commentCount: number;
-  profiles: { username: string; avatar_url: string | null; is_admin?: boolean } | null;
+  profiles: {
+    username: string;
+    avatar_url: string | null;
+    is_admin?: boolean;
+  } | null;
   tags: Tag[];
   likedBy: string[];
 };
@@ -72,7 +83,7 @@ type RawPost = Omit<Post, "tags" | "likedBy" | "commentCount" | "media"> & {
   post_media: { url: string; media_type: string; position: number }[] | null;
 };
 
-type FeedTab = "all" | "following" | "hot" | "forYou";
+type FeedTab = "all" | "following" | "hot" | "forYou" | "saved";
 
 type Warning = {
   id: string;
@@ -89,6 +100,7 @@ export default function FeedPage() {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const { ids: savedIds } = useBookmarks(userId);
   const [username, setUsername] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -104,6 +116,9 @@ export default function FeedPage() {
   const [userResults, setUserResults] = useState<UserResult[]>([]);
 
   const [showCompose, setShowCompose] = useState(false);
+  const [composeMode, setComposeMode] = useState<"text" | "photo" | "link">(
+    "text",
+  );
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -120,7 +135,7 @@ export default function FeedPage() {
     const { data, error } = await supabase
       .from("posts")
       .select(
-        "id, title, body, created_at, author_id, views, profiles!posts_author_id_fkey(username, avatar_url, is_admin), post_categories(categories(id, name)), post_likes(user_id), comments(count), post_media(url, media_type, position)"
+        "id, title, body, created_at, author_id, views, profiles!posts_author_id_fkey(username, avatar_url, is_admin), post_categories(categories(id, name)), post_likes(user_id), comments(count), post_media(url, media_type, position)",
       )
       .order("created_at", { ascending: false });
 
@@ -247,13 +262,13 @@ export default function FeedPage() {
 
   function toggleTag(id: number) {
     setSelectedTagIds((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     );
   }
 
   function toggleFilterCategory(id: number) {
     setFilterCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   }
 
@@ -275,7 +290,7 @@ export default function FeedPage() {
       if (video.size > MAX_VIDEO_SIZE_BYTES) {
         showToast(
           `Upload failed — video is over ${MAX_VIDEO_SIZE_MB}MB.`,
-          "error"
+          "error",
         );
         return;
       }
@@ -285,7 +300,7 @@ export default function FeedPage() {
         if (duration > MAX_VIDEO_DURATION_SECONDS) {
           showToast(
             `Upload failed — video is longer than ${MAX_VIDEO_DURATION_MINUTES} minutes.`,
-            "error"
+            "error",
           );
           return;
         }
@@ -320,7 +335,7 @@ export default function FeedPage() {
     if (files.length > room || oversized) {
       showToast(
         `Only added what fit — up to ${MAX_IMAGES} photos, each under 20MB.`,
-        "error"
+        "error",
       );
     }
 
@@ -381,14 +396,20 @@ export default function FeedPage() {
 
     if (error || !newPost) {
       setPosting(false);
-      const message = error?.message ?? "Something went wrong — please try again.";
+      const message =
+        error?.message ?? "Something went wrong — please try again.";
       setError(message);
       showToast(`Post failed — ${message}`, "error");
       return;
     }
 
     if (mediaFiles.length > 0) {
-      const mediaRows: { post_id: string; url: string; media_type: string; position: number }[] = [];
+      const mediaRows: {
+        post_id: string;
+        url: string;
+        media_type: string;
+        position: number;
+      }[] = [];
 
       for (let i = 0; i < mediaFiles.length; i++) {
         const file = mediaFiles[i];
@@ -427,7 +448,7 @@ export default function FeedPage() {
         selectedTagIds.map((category_id) => ({
           post_id: newPost.id,
           category_id,
-        }))
+        })),
       );
     }
 
@@ -455,8 +476,8 @@ export default function FeedPage() {
                 ? p.likedBy.filter((id) => id !== userId)
                 : [...p.likedBy, userId],
             }
-          : p
-      )
+          : p,
+      ),
     );
 
     if (liked) {
@@ -499,7 +520,7 @@ export default function FeedPage() {
     authorId: string,
     postId: string,
     postTitle: string,
-    message: string
+    message: string,
   ) {
     const { error } = await supabase.from("warnings").insert({
       user_id: authorId,
@@ -534,26 +555,26 @@ export default function FeedPage() {
     .filter(
       (p) =>
         filterCategoryIds.length === 0 ||
-        p.tags.some((t) => filterCategoryIds.includes(t.id))
+        p.tags.some((t) => filterCategoryIds.includes(t.id)),
     )
     .filter(
       (p) =>
         !query ||
         p.title.toLowerCase().includes(query) ||
-        p.body.toLowerCase().includes(query)
+        p.body.toLowerCase().includes(query),
     );
 
   let visiblePosts: Post[];
-  if (feedTab === "following") {
+  if (feedTab === "saved") {
+    visiblePosts = baseFiltered.filter((p) => savedIds.includes(p.id));
+  } else if (feedTab === "following") {
     visiblePosts = baseFiltered.filter((p) =>
-      followingIds.includes(p.author_id)
+      followingIds.includes(p.author_id),
     );
   } else if (feedTab === "hot") {
     // Views + likes + comments, decayed by age (classic "hot" ranking) so
     // fresh popular posts rise without old ones dominating forever.
-    visiblePosts = [...baseFiltered].sort(
-      (a, b) => hotScore(b) - hotScore(a)
-    );
+    visiblePosts = [...baseFiltered].sort((a, b) => hotScore(b) - hotScore(a));
   } else if (feedTab === "forYou") {
     // Build a lightweight taste profile from tags/keywords of posts this
     // user has liked, then rank everything by how well it matches — with
@@ -576,7 +597,7 @@ export default function FeedPage() {
         .filter(
           (p) =>
             p.title.toLowerCase().includes(query) ||
-            p.body.toLowerCase().includes(query)
+            p.body.toLowerCase().includes(query),
         )
         .slice(0, 5)
     : [];
@@ -609,7 +630,7 @@ export default function FeedPage() {
           : "text-gray-500";
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black">
+    <div className="feed-page relative min-h-screen overflow-hidden bg-black">
       <BackgroundShapes />
 
       {pendingWarnings.length > 0 && (
@@ -632,7 +653,8 @@ export default function FeedPage() {
                 >
                   {w.post_title && (
                     <p className="mb-1 text-xs text-gray-500">
-                      About: <span className="text-gray-300">{w.post_title}</span>
+                      About:{" "}
+                      <span className="text-gray-300">{w.post_title}</span>
                     </p>
                   )}
                   <p className="text-sm text-gray-200">{w.message}</p>
@@ -653,7 +675,30 @@ export default function FeedPage() {
         </div>
       )}
 
-      <div className="relative z-10 flex min-h-screen">
+      <div className="feed-layout relative z-10 flex min-h-screen">
+        {theme === "miku" && (
+          <MikuNavigation
+            userId={userId}
+            saved={feedTab === "saved"}
+            onHome={() => {
+              setFeedTab("all");
+              setFilterCategoryIds([]);
+              setSearchQuery("");
+              window.scrollTo({ top: 0 });
+            }}
+            onBookmarks={() => {
+              setFeedTab("saved");
+              setFilterCategoryIds([]);
+              setSearchQuery("");
+              window.scrollTo({ top: 0 });
+            }}
+            onCategories={() => {
+              const el = document.getElementById("miku-popular-categories");
+              el?.scrollIntoView({ block: "start" });
+              el?.focus({ preventScroll: true });
+            }}
+          />
+        )}
         {/* Sidebar */}
         <aside className="hidden w-60 shrink-0 flex-col border-r border-white/10 p-6 sm:flex">
           <div className="mb-8 flex items-center justify-between">
@@ -727,9 +772,15 @@ export default function FeedPage() {
             </button>
             {categories.map((c) =>
               theme === "miku" && c.slug === "daily-life" ? (
-                <DailyLifeMikuButton key={c.id} className="my-2 h-10 self-start" />
+                <DailyLifeMikuButton
+                  key={c.id}
+                  className="my-2 h-10 self-start"
+                />
               ) : theme === "miku" && c.slug === "education" ? (
-                <EducationMikuButton key={c.id} className="my-2 h-10 self-start" />
+                <EducationMikuButton
+                  key={c.id}
+                  className="my-2 h-10 self-start"
+                />
               ) : theme === "miku" && c.slug === "events" ? (
                 <EventsMikuButton key={c.id} className="my-2 h-10 self-start" />
               ) : (
@@ -738,18 +789,19 @@ export default function FeedPage() {
                   type="button"
                   onClick={() =>
                     setFilterCategoryIds((prev) =>
-                      prev.length === 1 && prev[0] === c.id ? [] : [c.id]
+                      prev.length === 1 && prev[0] === c.id ? [] : [c.id],
                     )
                   }
                   className={`rounded-lg px-3 py-2 text-left text-sm transition ${
-                    filterCategoryIds.length === 1 && filterCategoryIds[0] === c.id
+                    filterCategoryIds.length === 1 &&
+                    filterCategoryIds[0] === c.id
                       ? "bg-white text-black"
                       : "text-gray-400 hover:bg-white/5"
                   }`}
                 >
                   {c.name}
                 </button>
-              )
+              ),
             )}
           </nav>
         </aside>
@@ -773,6 +825,22 @@ export default function FeedPage() {
               </div>
             </div>
 
+            {theme === "miku" && (
+              <>
+                <MikuHero />
+                <MikuComposer
+                  onCompose={(mode) => {
+                    setComposeMode(mode);
+                    setShowCompose(true);
+                  }}
+                />
+              </>
+            )}
+            {feedTab === "saved" && (
+              <p className="mb-4 text-sm text-gray-400">
+                Bookmarks · Saved on this device
+              </p>
+            )}
             {/* All / Following / Hot / For You tabs */}
             <div data-tour="feed-tabs" className="mb-4 flex flex-wrap gap-2">
               {(
@@ -781,6 +849,7 @@ export default function FeedPage() {
                   ["following", "Following"],
                   ["hot", "Hot"],
                   ["forYou", "For You"],
+                  ["saved", "Bookmarks"],
                 ] as [FeedTab, string][]
               ).map(([tab, label]) => (
                 <button
@@ -905,7 +974,7 @@ export default function FeedPage() {
                               ? searchHistory
                               : searchHistory.slice(
                                   0,
-                                  SEARCH_HISTORY_VISIBLE_COUNT
+                                  SEARCH_HISTORY_VISIBLE_COUNT,
                                 )
                             ).map((term) => (
                               <div
@@ -919,7 +988,9 @@ export default function FeedPage() {
                                     addToHistory(term);
                                     setShowSearchDropdown(false);
                                     showToast(`Searching for "${term}"…`);
-                                    router.push(`/search?q=${encodeURIComponent(term)}`);
+                                    router.push(
+                                      `/search?q=${encodeURIComponent(term)}`,
+                                    );
                                   }}
                                   className="max-w-[9rem] truncate hover:text-white"
                                 >
@@ -937,7 +1008,8 @@ export default function FeedPage() {
                               </div>
                             ))}
                           </div>
-                          {searchHistory.length > SEARCH_HISTORY_VISIBLE_COUNT && (
+                          {searchHistory.length >
+                            SEARCH_HISTORY_VISIBLE_COUNT && (
                             <button
                               type="button"
                               onMouseDown={(e) => e.preventDefault()}
@@ -1062,7 +1134,10 @@ export default function FeedPage() {
             </div>
 
             {/* Category filter pills (mobile only — sidebar covers this on larger screens), multi-select */}
-            <div data-tour="categories" className="mb-6 flex flex-wrap gap-2 sm:hidden">
+            <div
+              data-tour="categories"
+              className="mb-6 flex flex-wrap gap-2 sm:hidden"
+            >
               <button
                 onClick={() => setFilterCategoryIds([])}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition ${
@@ -1086,18 +1161,19 @@ export default function FeedPage() {
                     type="button"
                     onClick={() =>
                       setFilterCategoryIds((prev) =>
-                        prev.length === 1 && prev[0] === c.id ? [] : [c.id]
+                        prev.length === 1 && prev[0] === c.id ? [] : [c.id],
                       )
                     }
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                      filterCategoryIds.length === 1 && filterCategoryIds[0] === c.id
+                      filterCategoryIds.length === 1 &&
+                      filterCategoryIds[0] === c.id
                         ? "border-white bg-white text-black"
                         : "border-white/10 bg-white/5 text-gray-400"
                     }`}
                   >
                     {c.name}
                   </button>
-                )
+                ),
               )}
             </div>
 
@@ -1130,12 +1206,16 @@ export default function FeedPage() {
             )}
           </div>
         </main>
+        {theme === "miku" && <MikuCategories categories={categories} />}
       </div>
 
       {/* Floating "new post" button */}
       <button
         data-tour="new-post"
-        onClick={() => setShowCompose(true)}
+        onClick={() => {
+          setComposeMode("text");
+          setShowCompose(true);
+        }}
         aria-label="New post"
         className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-black text-white ring-1 ring-white/30 shadow-[0_0_25px_rgba(255,255,255,0.45)] transition hover:shadow-[0_0_35px_rgba(255,255,255,0.7)]"
       >
@@ -1182,11 +1262,24 @@ export default function FeedPage() {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Ask anything about life in Halifax… (optional)"
+              placeholder={
+                composeMode === "link"
+                  ? "Paste your link and add some context…"
+                  : "Ask anything about life in Halifax… (optional)"
+              }
               rows={4}
               className="w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-white/40 focus:outline-none focus:ring-1 focus:ring-white/40"
             />
 
+            {composeMode === "photo" && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="my-3 rounded-xl border border-white/20 px-4 py-3 text-sm text-white"
+              >
+                Choose photos or a video
+              </button>
+            )}
             {mediaPreviews.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {mediaPreviews.map((preview, i) => (
@@ -1195,7 +1288,10 @@ export default function FeedPage() {
                     className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10"
                   >
                     {isVideo ? (
-                      <video src={preview} className="h-full w-full object-cover" />
+                      <video
+                        src={preview}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <img
                         src={preview}

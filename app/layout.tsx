@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Dancing_Script } from "next/font/google";
 import "./globals.css";
+import "./miku-theme.css";
+import "./miku-reference.css";
 import { ToastProvider } from "@/components/ToastProvider";
 import ThemeApplier from "@/components/ThemeApplier";
 

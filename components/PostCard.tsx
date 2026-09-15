@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import MediaCarousel, { MediaItem } from "./MediaCarousel";
 import AdminBadge from "./AdminBadge";
 import MikuChibi from "./MikuChibi";
+import { useBookmarks } from "@/utils/bookmarks";
+import { useToast } from "./ToastProvider";
 import { useTheme } from "@/utils/useTheme";
 import {
   formatRelativeTime,
@@ -55,11 +57,14 @@ export default function PostCard({
     authorId: string,
     postId: string,
     postTitle: string,
-    message: string
+    message: string,
   ) => void | Promise<void>;
 }) {
   const router = useRouter();
   const theme = useTheme();
+  const { ids: savedIds, toggle: toggleSaved } = useBookmarks(userId);
+  const { showToast } = useToast();
+  const saved = savedIds.includes(post.id);
   const liked = post.likedBy.includes(userId ?? "");
   const trending =
     post.views >= TRENDING_VIEWS || post.likedBy.length >= TRENDING_LIKES;
@@ -94,7 +99,12 @@ export default function PostCard({
     e.stopPropagation();
     if (!warnMessage.trim() || !onSendWarning) return;
     setSendingWarning(true);
-    await onSendWarning(post.author_id, post.id, post.title, warnMessage.trim());
+    await onSendWarning(
+      post.author_id,
+      post.id,
+      post.title,
+      warnMessage.trim(),
+    );
     setSendingWarning(false);
     closeWarn();
   }
@@ -192,6 +202,22 @@ export default function PostCard({
             {post.commentCount} {post.commentCount === 1 ? "reply" : "replies"}
           </span>
           <span>{post.views} views</span>
+          {userId && (
+            <button
+              type="button"
+              className="ml-auto hover:text-white"
+              aria-pressed={saved}
+              aria-label={saved ? "Remove bookmark" : "Bookmark post"}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!toggleSaved(post.id))
+                  showToast("Could not save bookmark on this device.", "error");
+              }}
+            >
+              {saved ? "Bookmarked ✓" : "Bookmark"}
+            </button>
+          )}
         </div>
       </Link>
 
